@@ -324,22 +324,22 @@
     <p class="quiz-sub" data-i18n="4 个小问题，生成一条只属于你的参观路线。也可以直接跳过，使用经典路线。">4 个小问题，生成一条只属于你的参观路线。也可以直接跳过，使用经典路线。</p>
 
     <div class="q-block">
-      <div class="q-head"><span class="q-num">01</span><span class="q-label">你打算停留多久？</span></div>
+      <div class="q-head"><span class="q-num">01</span><span class="q-label" data-i18n="你打算停留多久？">你打算停留多久？</span></div>
       <div class="opt-grid" id="qTime"></div>
     </div>
 
     <div class="q-block">
-      <div class="q-head"><span class="q-num">02</span><span class="q-label">对哪些领域感兴趣？</span><span class="q-hint">可多选</span></div>
+      <div class="q-head"><span class="q-num">02</span><span class="q-label" data-i18n="对哪些领域感兴趣？">对哪些领域感兴趣？</span><span class="q-hint" data-i18n="可多选">可多选</span></div>
       <div class="chips" id="qInterests"></div>
     </div>
 
     <div class="q-block">
-      <div class="q-head"><span class="q-num">03</span><span class="q-label">想要什么游览节奏？</span></div>
+      <div class="q-head"><span class="q-num">03</span><span class="q-label" data-i18n="想要什么游览节奏？">想要什么游览节奏？</span></div>
       <div class="opt-grid" id="qPace"></div>
     </div>
 
     <div class="q-block">
-      <div class="q-head"><span class="q-num">04</span><span class="q-label">需要无障碍动线吗？</span></div>
+      <div class="q-head"><span class="q-num">04</span><span class="q-label" data-i18n="需要无障碍动线吗？">需要无障碍动线吗？</span></div>
       <div class="opt-grid" id="qAccess" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));"></div>
     </div>
 
@@ -491,6 +491,14 @@ const EN_MAP={
 };
 EN_MAP['上海博物馆东馆 · 世纪大道 1952 号']='Shanghai Museum East · 1952 Century Avenue';
 
+/* ── 中英切换辅助：有 EN 字段则英文，否则回退中文 ── */
+const TL = (o, k) => (o && I18N_LANG.current === 'en' && o[k + 'EN'] != null) ? o[k + 'EN'] : (o ? o[k] : '');
+const TLarr = (o, k) => {
+  if (o && I18N_LANG.current === 'en' && Array.isArray(o[k + 'EN'])) return o[k + 'EN'];
+  if (o && Array.isArray(o[k])) return o[k];
+  return [];
+};
+
 function applyPlannerLang(lang){
   I18N_LANG.current=lang;
   document.documentElement.lang=lang==='en'?'en':'zh-CN';
@@ -534,6 +542,9 @@ const GALLERY_IMG = {
   G_Painting:'painting_gaoyi_tu.jpg', G_Shanghai_Painting:'shanghai_painting_lady_mirror.jpg',
   G_CeraMIX:'ceramix_camel_sogdian.jpg', G_Numismatics:'numismatics_gallery.jpg',
   G_Archaeology:'archaeology_gallery.jpg', G_Jiangnan:'jiangnan_gallery.jpg',
+  G_Calligraphy:'shanghai_shufa_lidai.nl80.webp',
+  G_Ceramics:'shanghaici_palette.png',
+  G_ZhaoPuchu:'zhao.nl90.webp',
   ENTRY:'museum_exterior.jpg'
 };
 /* 无图展厅占位字 */
@@ -661,7 +672,7 @@ const MAP_MARKERS = {
 };
 
 /* ═══ 数据（fetch 优先，内嵌副本兖底）═══ */
-let GALLERIES = [], ROUTES = [], ARTWORKS = [], POPULARITY = [], PRACTICAL = null, FLOOR_SUMMARY = {};
+let GALLERIES = [], ROUTES = [], ARTWORKS = [], POPULARITY = [], PRACTICAL = null, FLOOR_SUMMARY = {}, FLOOR_SUMMARY_EN = {};
 
 async function loadData() {
   try {
@@ -672,12 +683,12 @@ async function loadData() {
       fetch(DATA_BASE + 'popularity.json').then(x => { if (!x.ok) throw 0; return x.json(); }),
       fetch(DATA_BASE + 'practical-info.json').then(x => { if (!x.ok) throw 0; return x.json(); })
     ]);
-    GALLERIES = g.galleries; FLOOR_SUMMARY = g.floorSummary || {};
+    GALLERIES = g.galleries; FLOOR_SUMMARY = g.floorSummary || {}; FLOOR_SUMMARY_EN = g.floorSummaryEN || {};
     ROUTES = r.routes; ARTWORKS = a.artworks;
     POPULARITY = p.popularityEstimates.items; PRACTICAL = info;
   } catch (e) {
     const d = EMBEDDED;
-    GALLERIES = d.galleries; FLOOR_SUMMARY = d.floorSummary;
+    GALLERIES = d.galleries; FLOOR_SUMMARY = d.floorSummary; FLOOR_SUMMARY_EN = d.floorSummaryEN || {};
     ROUTES = d.routes; ARTWORKS = d.artworks;
     POPULARITY = d.popularity; PRACTICAL = d.practical;
   }
@@ -799,9 +810,9 @@ function matchRoute(prefs) {
     if (inRoute.has(gid)) return;
     const g = galleryById(gid);
     if (!g) return;
-    stops.push({ galleryId:gid, name:shortName(g.name), duration_min:g.walkingTime_min || 15,
-      notes:(g.highlights && g.highlights[0]) ? '亮点：' + g.highlights[0] : g.description, added:true });
-    addedNames.push(shortName(g.name));
+    stops.push({ galleryId:gid, name:shortName(TL(g,'name')), duration_min:g.walkingTime_min || 15,
+      notes:(TLarr(g,'highlights') && TLarr(g,'highlights')[0]) ? '亮点：' + TLarr(g,'highlights')[0] : TL(g,'description'), added:true });
+    addedNames.push(shortName(TL(g,'name')));
   });
   if (addedNames.length) reasons.push(__T('按兴趣必含 <b>','Added by interest: <b>') + addedNames.join('、') + '</b>');
 
@@ -839,7 +850,7 @@ function matchRoute(prefs) {
   const walking = (base.totalWalkingTime_min || 10) + addedNames.length * 5;
   const totalMin = round5(stops.reduce((t, s) => t + s.duration_min, 0) + walking);
 
-  return { id:'ai_custom', custom:true, name:'AI 定制路线', basedOn:base.name,
+  return { id:'ai_custom', custom:true, name:'AI 定制路线', nameEN:'AI Custom Route', basedOn:base.name,
     description:'基于「' + base.name + '」按你的偏好调整', stops, walkingMin:walking, totalMin, reasons };
 }
 
@@ -847,7 +858,7 @@ function normalizePreset(r) {
   const stops = r.stops.map((s, i) => ({ ...s, order:i + 1 }));
   const walking = r.totalWalkingTime_min || 10;
   const totalMin = round5(stops.reduce((t, s) => t + s.duration_min, 0) + walking);
-  return { id:r.id, custom:false, name:r.name, description:r.description, stops, walkingMin:walking, totalMin, reasons:[] };
+  return { id:r.id, custom:false, name:TL(r,'name'), description:TL(r,'description'), stops, walkingMin:walking, totalMin, reasons:[] };
 }
 
 /* ═══ 全局状态 ═══ */
@@ -937,11 +948,11 @@ function setRoute(route, jumpToFirst) {
   if (route.custom) state.customRoute = route;
   renderLibrary();
   const st = routeStats(route);
-  $('#routeTitle').textContent = route.name;
+  $('#routeTitle').textContent = TL(route,'name');
   $('#routeMeta').textContent =
     __T('约','~') + ' ' + fmtDur(st.totalMin) + ' · ' + st.stops + __T('个展厅',' galleries') + ' · ' + st.floors + __T('层','F') + ' · ' + __T('镇馆之宝','Treasures') + ' ' + st.treasures;
   $('#reasonChips').innerHTML = (route.reasons || []).map(r => '<span class="reason-chip">' + r + '</span>').join('');
-  $('#curRouteName').textContent = route.name;
+  $('#curRouteName').textContent = TL(route,'name');
   $('#curRouteMeta').textContent = fmtDur(st.totalMin) + ' · ' + st.stops + __T('站',' stops') + ' · ' + st.floors + __T('层','F');
   renderFloorBar();
   goFloor(jumpToFirst === false && state.floor ? state.floor : state.floorsInRoute[0]);
@@ -971,9 +982,9 @@ function renderLibrary() {
 function routeItemHTML(r, st, isCustom) {
   const on = state.route && state.route.id === r.id ? ' on' : '';
   return '<div class="route-item' + on + (isCustom ? ' custom' : '') + '" data-rid="' + r.id + '">' +
-    '<div class="rn">' + (isCustom ? '<span class="ai-tag">AI</span>' : '') + r.name + '</div>' +
+    '<div class="rn">' + (isCustom ? '<span class="ai-tag">AI</span>' : '') + TL(r,'name') + '</div>' +
     '<div class="rm">' + __T('约','~') + ' ' + fmtDur(st.totalMin) + ' · ' + st.stops + ' ' + __T('站','stops') + ' · ' + __T('跨','Across') + ' ' + st.floors + ' ' + __T('层','F') + '</div>' +
-    '<div class="rd">' + (r.description || '') + '</div></div>';
+    '<div class="rd">' + (TL(r,'description') || '') + '</div></div>';
 }
 
 /* ── 侧边栏：重新定制 ── */
@@ -1028,13 +1039,13 @@ function goFloor(fk) {
   } else {
     const stops = stopsOnFloor(state.route, fk);
     let html = '<div class="floor-title-row"><span class="floor-title">' + fk + '</span>' +
-      '<span class="floor-sub">' + (FLOOR_SUMMARY[fk] || '') + '</span></div>';
+      '<span class="floor-sub">' + ((I18N_LANG.current === 'en' ? (FLOOR_SUMMARY_EN[fk] || FLOOR_SUMMARY[fk]) : FLOOR_SUMMARY[fk]) || '') + '</span></div>';
     html += REAL_MAP_FLOORS[fk] ? floorMapReal(fk, stops) : floorMapSVG(fk, stops);
     if (!stops.length) {
       const gs = GALLERIES.filter(g => floorKey(g.floor) === fk);
       html += '<div class="floor-empty"><h3>' + __T('本层未安排展厅','No galleries on this floor') + '</h3>' +
         '<p>' + __T('当前路线在这一层没有停留点。如果逛完还有余力，可以自由探索：','This floor not in route. Explore freely:') + '</p>' +
-        '<div class="fe-list">' + (gs.map(g => shortName(g.name)).join(' · ') || __T('本层为公共通道','Public areas only')) + '</div></div>';
+        '<div class="fe-list">' + (gs.map(g => shortName(TL(g,'name'))).join(' · ') || __T('本层为公共通道','Public areas only')) + '</div></div>';
     } else {
       html += '<div class="stops">' + stops.map(stopCardHTML).join('') + '</div>';
     }
@@ -1072,7 +1083,7 @@ function floorMapSVG(fk, stops) {
     const onIdx = onRouteIds.indexOf(gid);
     const onRoute = onIdx >= 0;
     const g = gid === 'ENTRY' ? null : galleryById(gid);
-    const name = gid === 'ENTRY' ? '东入口（B1）' : shortName(g ? g.name : gid);
+    const name = gid === 'ENTRY' ? __T('东入口（B1）','East Entrance (B1)') : shortName(g ? TL(g,'name') : gid);
     const cx = b.x + b.w / 2, cy = b.y + b.h / 2;
     const stop = onRoute ? stops[onIdx] : null;
     const marker = onRoute
@@ -1121,7 +1132,7 @@ function floorMapReal(fk, stops) {
     const onIdx = onRouteIds.indexOf(gid);
     const onRoute = onIdx >= 0;
     const g = gid === 'ENTRY' ? null : galleryById(gid);
-    const name = gid === 'ENTRY' ? '东入口' : shortName(g ? g.name : gid);
+    const name = gid === 'ENTRY' ? __T('东入口','East Entrance') : shortName(g ? TL(g,'name') : gid);
     const stop = onRoute ? stops[onIdx] : null;
 
     if (onRoute) {
@@ -1161,10 +1172,10 @@ function stopCardHTML(s) {
   if (state.prefs.access && !s.virtual) tags.push('<span class="stag soft">' + __T('无障碍可达','Accessible') + '</span>');
   return '<div class="stop-card" data-gid="' + s.galleryId + '">' +
     '<span class="stop-ord">' + (s.virtual ? '始' : String(s.order).padStart(2, '0')) + '</span>' +
-    '<div class="stop-name">' + (g ? shortName(g.name) : s.name) + '</div>' +
+    '<div class="stop-name">' + (g ? shortName(TL(g,'name')) : s.name) + '</div>' +
     '<div class="stop-dur">' + __T('建议','~') + ' ' + s.duration_min + __T('分钟','min') + '</div>' +
     (tags.length ? '<div class="stop-tags">' + tags.join('') + '</div>' : '') +
-    (s.notes ? '<div class="stop-notes">' + s.notes + '</div>' : '') +
+    (TL(s,'notes') ? '<div class="stop-notes">' + TL(s,'notes') + '</div>' : '') +
     '</div>';
 }
 function bindFloorView(view) {
@@ -1190,7 +1201,7 @@ function summaryHTML() {
     ? '<li><b>无障碍提示：</b>' + ((((p.admission || {}).priorityAccess) || {}).note || '可优先入馆') + '；馆内电梯贯通 B1–5F，轮椅免费租借（凭证件）。</li>'
     : '';
   return '<div class="sum-card" id="summaryView">' +
-    '<div class="sum-hero"><div class="st">' + __T('Route Summary · 路线总结') + '</div><h2>' + __T(r.name) + '</h2></div>' +
+    '<div class="sum-hero"><div class="st">' + __T('Route Summary · 路线总结') + '</div><h2>' + TL(r,'name') + '</h2></div>' +
     '<div class="sum-stats">' +
       '<div class="sum-stat"><div class="n">' + fmtDur(st.totalMin) + '</div><div class="l">' + __T('预计总时长','Total Duration') + '</div></div>' +
       '<div class="sum-stat"><div class="n">' + st.stops + '</div><div class="l">' + __T('展厅站点','Galleries') + '</div></div>' +
@@ -1198,14 +1209,14 @@ function summaryHTML() {
       '<div class="sum-stat"><div class="n">' + st.treasures + '</div><div class="l">' + __T('镇馆之宝','Treasures') + '</div></div>' +
     '</div>' +
     (treasures.length ? '<div class="sum-sec"><h4>' + __T('沿途镇馆之宝','Treasures Along the Way') + '</h4>' + '<ul>' +
-      treasures.map(a => '<li><b>' + a.name + '</b>（' + a.period + '）— ' + a.description + '</li>').join('') + '</ul></div>' : '') +
+      treasures.map(a => '<li><b>' + TL(a,'name') + '</b>（' + TL(a,'period') + '）— ' + TL(a,'description') + '</li>').join('') + '</ul></div>' : '') +
     '<div class="sum-sec"><h4>' + __T('实用信息','Practical Info') + '</h4>' + '<ul>' +
-      '<li><b>开放：</b>10:00 – 18:00（周二闭馆，17:00 停止入馆）</li>' +
-      '<li><b>入馆：</b>' + (((p.entrance || {}).individual) || 'B1 东入口') + '；' + ((((p.admission || {}).reservation || {}).individual || {}).note || '散客免预约') + '</li>' +
-      (metro ? '<li><b>地铁：</b>' + metro + '</li>' : '') +
-      (dining ? '<li><b>餐饮：</b>' + dining + '</li>' : '') +
+      '<li><b>' + __T('开放：','Opening:') + '</b>' + __T('10:00 – 18:00（周二闭馆，17:00 停止入馆）','10:00 – 18:00 (Closed Tuesdays, last entry 17:00)') + '</li>' +
+      '<li><b>' + __T('入馆：','Entry:') + '</b>' + (((p.entrance || {}).individual) || __T('B1 东入口','B1 East Entrance')) + '；' + ((((p.admission || {}).reservation || {}).individual || {}).note || __T('散客免预约','No reservation needed')) + '</li>' +
+      (metro ? '<li><b>' + __T('地铁：','Metro:') + '</b>' + metro + '</li>' : '') +
+      (dining ? '<li><b>' + __T('餐饮：','Dining:') + '</b>' + dining + '</li>' : '') +
       accessNote +
-      (gids.has('G_Roof') ? '<li><b>屋顶花园：</b>' + (((p.roofGarden || {}).note) || '天气不佳时临时关闭') + '</li>' : '') +
+      (gids.has('G_Roof') ? '<li><b>' + __T('屋顶花园：','Roof Garden:') + '</b>' + (((p.roofGarden || {}).note) || __T('天气不佳时临时关闭','Temporarily closed in bad weather')) + '</li>' : '') +
     '</ul></div>' +
     '<div class="sum-actions">' +
       '<button class="btn-solid" id="sumRecustom">' + __T('重新定制路线','Recustomize Route') + '</button>' +
@@ -1218,12 +1229,12 @@ function bindSummary(view) {
   view.querySelector('#sumBack').addEventListener('click', () => goFloor(state.floorsInRoute[0]));
   view.querySelector('#sumCopy').addEventListener('click', e => {
     const r = state.route;
-    let txt = 'CuratorPath · Shanghai Museum East\n'+__T('路线','Route')+'：' + r.name + '\n'+__T('预计','Est.')+'：' + fmtDur(routeStats(r).totalMin) + '\n\n';
+    let txt = 'CuratorPath · Shanghai Museum East\n'+__T('路线','Route')+'：' + TL(r,'name') + '\n'+__T('预计','Est.')+'：' + fmtDur(routeStats(r).totalMin) + '\n\n';
     txt += 'B1 · ' + __T('东入口安检入馆','East Entrance Security') + '（10 ' + __T('分钟','min') + '）\n';
     state.floorsInRoute.filter(f => f !== 'B1').forEach(f => {
       stopsOnFloor(r, f).forEach(s => {
         const g = galleryById(s.galleryId);
-        txt += f + ' · ' + (g ? shortName(g.name) : s.name) + '（' + s.duration_min + ' ' + __T('分钟','min') + '）' + (s.notes ? ' — ' + s.notes : '') + '\n';
+        txt += f + ' · ' + (g ? shortName(TL(g,'name')) : s.name) + '（' + s.duration_min + ' ' + __T('分钟','min') + '）' + (TL(s,'notes') ? ' — ' + TL(s,'notes') : '') + '\n';
       });
     });
     navigator.clipboard.writeText(txt).then(() => {
@@ -1241,11 +1252,11 @@ function openStopModal(gid, stop) {
   const img = imgSrc(gid);
   const dur = stop ? stop.duration_min : (g.walkingTime_min || 15);
   const media = img
-    ? '<img class="sm-img" src="' + img + '" alt="' + shortName(g.name) + '">'
+    ? '<img class="sm-img" src="' + img + '" alt="' + shortName(TL(g,'name')) + '">'
     : '<div class="sm-ph"><span class="ch">' + (GALLERY_PH[gid] || '馆') + '</span><span class="cp">IMAGE COMING SOON</span></div>';
   $('#smBox').innerHTML = media +
     '<div class="sm-body"><div class="sm-top"><div>' +
-      '<div class="sm-name">' + shortName(g.name) + '</div>' +
+      '<div class="sm-name">' + shortName(TL(g,'name')) + '</div>' +
       '<div class="sm-en">' + (g.nameEN || '') + '</div></div>' +
       '<button class="sm-close" id="smClose">✕</button></div>' +
     '<div class="sm-meta">' +
@@ -1255,13 +1266,13 @@ function openStopModal(gid, stop) {
       (g.mustSee ? '<span class="stag inv">'+__T('必看','Must-see')+'</span>' : '') +
       (g.seasonal ? '<span class="stag soft">' + __T('天气依赖','Weather dep.') + '</span>' : '') +
     '</div>' +
-    '<div class="sm-desc">' + (g.description || '') + (stop && stop.notes ? '<br><br>'+__T('路线备注：','Route notes: ')+stop.notes : '') + '</div>' +
-    (g.highlights && g.highlights.length
-      ? '<div class="sm-sec"><h5>亮点展品</h5><div class="sm-hl">' +
-        g.highlights.map(h => '<span class="chip">' + h + '</span>').join('') + '</div></div>' : '') +
+    '<div class="sm-desc">' + (TL(g,'description') || '') + (stop && TL(stop,'notes') ? '<br><br>'+__T('路线备注：','Route notes: ')+TL(stop,'notes') : '') + '</div>' +
+    (TLarr(g,'highlights') && TLarr(g,'highlights').length
+      ? '<div class="sm-sec"><h5>' + __T('亮点展品','Highlights') + '</h5><div class="sm-hl">' +
+        TLarr(g,'highlights').map(h => '<span class="chip">' + h + '</span>').join('') + '</div></div>' : '') +
     (treasures.length
-      ? '<div class="sm-sec"><h5>镇馆之宝</h5>' +
-        treasures.map(a => '<div class="sm-treasure"><span>' + a.name + '</span><span class="tp">' + a.period + '</span></div>').join('') + '</div>' : '') +
+      ? '<div class="sm-sec"><h5>' + __T('镇馆之宝','Treasures') + '</h5>' +
+        treasures.map(a => '<div class="sm-treasure"><span>' + TL(a,'name') + '</span><span class="tp">' + TL(a,'period') + '</span></div>').join('') + '</div>' : '') +
     (pop ? '<div class="sm-sec"><h5>人气指数 ' + Math.round(pop.score * 100) + '</h5><div class="sm-pop"><i style="width:' + Math.round(pop.score * 100) + '%"></i></div></div>' : '') +
     '</div>';
   $('#stopModal').classList.add('on');
@@ -1274,15 +1285,15 @@ function openEntryModal() {
   $('#smBox').innerHTML =
     '<img class="sm-img" src="' + imgSrc('ENTRY') + '" alt="上海博物馆东馆">' +
     '<div class="sm-body"><div class="sm-top"><div>' +
-      '<div class="sm-name">东入口 · 安检入馆</div>' +
+      '<div class="sm-name">' + __T('东入口 · 安检入馆','East Entrance') + '</div>' +
       '<div class="sm-en">B1 East Entrance</div></div>' +
       '<button class="sm-close" id="smClose">✕</button></div>' +
     '<div class="sm-meta"><span class="stag inv">B1</span><span class="stag soft">' + __T('建议','~') + ' 10 ' + __T('分钟','min') + '</span><span class="stag inv">' + __T('起点','Start') + '</span></div>' +
-    '<div class="sm-desc">' + (((p.entrance || {}).individual) || '散客自 B1 东入口安检入馆') + '。' +
+    '<div class="sm-desc">' + (((p.entrance || {}).individual) || __T('散客自 B1 东入口安检入馆','Individual visitors enter via B1 East Entrance (near Dingxiang Road)')) + '。' +
       ((((p.admission || {}).reservation || {}).individual || {}).note || '') + '</div>' +
-    (metro.length ? '<div class="sm-sec"><h5>地铁</h5>' +
+    (metro.length ? '<div class="sm-sec"><h5>' + __T('地铁','Metro') + '</h5>' +
       metro.map(m => '<div class="sm-treasure"><span>' + m.line + ' 号线 · ' + m.station + '</span><span class="tp">' + m.exit + '</span></div>').join('') + '</div>' : '') +
-    (services.length ? '<div class="sm-sec"><h5>馆内服务</h5><div class="sm-hl">' +
+    (services.length ? '<div class="sm-sec"><h5>' + __T('馆内服务','On-site Services') + '</h5><div class="sm-hl">' +
       services.map(s => '<span class="chip">' + s + '</span>').join('') + '</div></div>' : '') +
     '</div>';
   $('#stopModal').classList.add('on');
