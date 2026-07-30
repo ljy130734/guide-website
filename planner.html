@@ -2395,6 +2395,18 @@ $('#soonHome').addEventListener('click', () => { location.href = 'index.html?ski
   const m = (params.get('museum') || params.get('m') || 'shanghai').toLowerCase();
   const isShanghai = ['shanghai', 'shmuseum', 'sh'].includes(m);
 
+  /* 故宫 → 专属页面 */
+  if (['gugong', 'palace', 'forbidden'].includes(m)) {
+    location.replace('gugong.html');
+    return;
+  }
+
+  /* 大都会 → 专属页面 */
+  if (['met', 'themet', 'metropolitan'].includes(m)) {
+    location.replace('met.html?museum=met');
+    return;
+  }
+
   const dataReady = loadData();
 
   /* 品牌闪现 ~600ms */
