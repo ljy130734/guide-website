@@ -1,0 +1,192 @@
+{
+  "galleries": [
+    {
+      "id": "G_Bronze",
+      "name": "中国古代青铜馆",
+      "nameEN": "Ancient Chinese Bronze Gallery",
+      "floor": 1,
+      "zone": "West",
+      "area": "~1000 sqm",
+      "description": "海内外体系最完整的古代青铜器阵列，展出500余件，涵盖夏代至清代3600年青铜艺术史",
+      "highlights": ["大克鼎(西周)", "子仲姜盘(春秋)", "商鞅方升(战国)", "见日之光镜(西汉)"],
+      "walkingTime_min": 30,
+      "mustSee": true
+    },
+    {
+      "id": "G_Sculpture",
+      "name": "雕塑馆",
+      "nameEN": "Sculpture Gallery",
+      "floor": 1,
+      "zone": "East",
+      "description": "289件/套骨雕、玉雕、青铜造像、木俑、陶俑，三分之一为首次公开展出",
+      "highlights": ["白石供养菩萨像(唐代)", "各类佛教造像"],
+      "walkingTime_min": 20,
+      "mustSee": true
+    },
+    {
+      "id": "G_Special1",
+      "name": "第一特展厅（光明乳业）",
+      "nameEN": "Special Exhibition Hall 1",
+      "floor": 1,
+      "zone": "North",
+      "description": "大型特展空间，举办'何以中国'系列等重磅特展",
+      "walkingTime_min": 20,
+      "mustSee": false
+    },
+    {
+      "id": "G_Jade",
+      "name": "中国古代玉器馆",
+      "nameEN": "Jade Gallery",
+      "floor": 2,
+      "zone": "West",
+      "description": "近350件/组玉器，从新石器时代至清代，六个单元呈现中国万年玉文化",
+      "highlights": ["红山文化玉器", "良渚文化玉器"],
+      "walkingTime_min": 20,
+      "mustSee": true
+    },
+    {
+      "id": "G_Seal",
+      "name": "玺印篆刻馆",
+      "nameEN": "Seal Gallery",
+      "floor": 2,
+      "zone": "Center-West",
+      "area": "~600 sqm",
+      "description": "568件印章，海内外首个中国印章专题陈列馆，展示印章史与全球古代文明的关系",
+      "walkingTime_min": 15,
+      "mustSee": false
+    },
+    {
+      "id": "G_Calligraphy",
+      "name": "中国历代书法馆",
+      "nameEN": "Calligraphy Gallery",
+      "floor": 2,
+      "zone": "Center-East",
+      "description": "海内外唯一的常设通史书法陈列，展出多件国宝级书法名迹",
+      "highlights": ["王羲之草书《上虞帖》", "王献之《鸭头丸帖》", "怀素草书《苦笋帖》"],
+      "walkingTime_min": 25,
+      "mustSee": true
+    },
+    {
+      "id": "G_Painting",
+      "name": "中国历代绘画馆",
+      "nameEN": "Painting Gallery",
+      "floor": 2,
+      "zone": "East",
+      "description": "海内外唯一的常设通史绘画陈列，展出多年未公开展示的国宝级书画",
+      "highlights": ["《高逸图》卷(唐·孙位)", "《雪竹图》轴", "Lady with a Mirror"],
+      "walkingTime_min": 25,
+      "mustSee": true
+    },
+    {
+      "id": "G_Special2",
+      "name": "第二特展厅（中国东方航空）",
+      "nameEN": "Special Exhibition Hall 2",
+      "floor": 2,
+      "zone": "North",
+      "description": "大型特展空间，举办国际交流大展",
+      "walkingTime_min": 20,
+      "mustSee": false
+    },
+    {
+      "id": "G_Shanghai_Painting",
+      "name": "上海书画馆",
+      "nameEN": "Shanghai Painting and Calligraphy Gallery",
+      "floor": 2,
+      "zone": "South",
+      "description": "探索江南文化、海派文化与红色文化，通过书画呈现上海文化脉络",
+      "walkingTime_min": 15,
+      "mustSee": false
+    },
+    {
+      "id": "G_Ceramics",
+      "name": "中国古代陶瓷展",
+      "nameEN": "Ceramics Gallery",
+      "floor": 3,
+      "zone": "West",
+      "area": "~1800 sqm",
+      "description": "中国陶瓷通史陈列，从新石器至明清，体系最完整的通史陈列之一",
+      "highlights": ["绿釉鹦鹉形杯", "各类名窑瓷器"],
+      "walkingTime_min": 25,
+      "mustSee": true
+    },
+    {
+      "id": "G_CeraMIX",
+      "name": "CeraMIX 陶瓷与中外交流馆",
+      "nameEN": "CeraMIX Gallery",
+      "floor": 3,
+      "zone": "Center",
+      "description": "全新常设展，通过陶瓷贸易讲述隋唐至明清中国与世界的经济文化交流",
+      "walkingTime_min": 15,
+      "mustSee": false
+    },
+    {
+      "id": "G_Numismatics",
+      "name": "中国历代货币馆",
+      "nameEN": "Numismatics Gallery",
+      "floor": 3,
+      "zone": "East",
+      "description": "展出6000余枚钱币，规模翻倍，全面回顾中国货币金融发展史",
+      "walkingTime_min": 15,
+      "mustSee": false
+    },
+    {
+      "id": "G_ZhaoPuchu",
+      "name": "赵朴初书法馆",
+      "nameEN": "Calligraphy by Zhao Puchu Gallery",
+      "floor": 3,
+      "zone": "Center-East",
+      "description": "纪念赵朴初(1907-2000)先生的书法艺术专题馆",
+      "walkingTime_min": 10,
+      "mustSee": false
+    },
+    {
+      "id": "G_Archaeology",
+      "name": "考古上海馆",
+      "nameEN": "Archaeology Gallery",
+      "floor": 4,
+      "zone": "West",
+      "description": "2000余件考古文物，追溯上海6000年城市演变史",
+      "walkingTime_min": 15,
+      "mustSee": false
+    },
+    {
+      "id": "G_Jiangnan",
+      "name": "江南文化馆",
+      "nameEN": "Jiangnan Gallery",
+      "floor": 4,
+      "zone": "East",
+      "description": "现代极简风格融合江南文化元素，自然光与户外景观中品味文物",
+      "walkingTime_min": 15,
+      "mustSee": false
+    },
+    {
+      "id": "G_Special3",
+      "name": "第三特展厅",
+      "nameEN": "Special Exhibition Hall 3",
+      "floor": 3,
+      "zone": "North",
+      "description": "国际交流特展空间",
+      "walkingTime_min": 20,
+      "mustSee": false
+    },
+    {
+      "id": "G_Roof",
+      "name": "屋顶花园",
+      "nameEN": "Roof Garden",
+      "floor": 5,
+      "description": "5楼屋顶花园，天气不好时临时关闭",
+      "walkingTime_min": 15,
+      "mustSee": true,
+      "seasonal": true,
+      "note": "Weather dependent"
+    }
+  ],
+  "floorSummary": {
+    "1F": "青铜馆、雕塑馆、第一特展厅、服务中心、商店咖啡",
+    "2F": "玉器馆、玺印篆刻馆、书法馆、绘画馆、上海书画馆、第二特展厅、咖啡阶梯",
+    "3F": "陶瓷馆、CeraMIX馆、货币馆、赵朴初书法馆、第三特展厅、餐厅",
+    "4F": "考古馆、江南文化馆、茶室",
+    "5F": "屋顶花园（天气依赖）",
+    "B1": "东入口（丁香路方向）、存包处"
+  }
+}

@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CuratorPath · 上海博物馆东馆路线规划</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  @font-face { font-family:'Telma'; src:url('fonts/Telma-Medium.otf') format('opentype'); font-weight:500; font-style:normal; font-display:swap; }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root {
+    --bg:#ffffff; --ink:#111111; --ink-60:rgba(17,17,17,.6); --ink-40:rgba(17,17,17,.4);
+    --line:1px solid #111111; --line-soft:1px solid rgba(17,17,17,.14); --panel:#fafafa;
+    --font-ui:'Space Grotesk',system-ui,-apple-system,sans-serif;
+    --font-mono:'Space Mono',monospace;
+    --font-brand:'Telma','Space Grotesk',serif;
+  }
+  html,body { height:100%; }
+  body { font-family:var(--font-ui); background:var(--bg); color:var(--ink); -webkit-font-smoothing:antialiased; overflow:hidden; }
+  button { font-family:inherit; cursor:pointer; }
+  ::selection { background:var(--ink); color:var(--bg); }
+
+  .btn-solid { background:var(--ink); color:var(--bg); border:var(--line); padding:.85rem 2rem;
+    font-family:var(--font-mono); font-size:.78rem; letter-spacing:.14em; text-transform:uppercase; transition:opacity .15s; }
+  .btn-solid:hover { opacity:.82; }
+  .btn-ghost { background:var(--bg); color:var(--ink); border:var(--line); padding:.85rem 2rem;
+    font-family:var(--font-mono); font-size:.78rem; letter-spacing:.14em; text-transform:uppercase; transition:.15s; }
+  .btn-ghost:hover { background:var(--ink); color:var(--bg); }
+
+  /* ═══ PHASE 0 · 品牌闪现 ═══ */
+  #flash { position:fixed; inset:0; z-index:400; background:var(--bg);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1rem;
+    opacity:0; transition:opacity .25s ease; }
+  #flash.show { opacity:1; }
+  #flash.hide { opacity:0; pointer-events:none; }
+  #flash .fb { font-family:var(--font-brand); font-size:clamp(3rem,9vw,6.5rem); letter-spacing:.03em; }
+  #flash .fs { font-family:var(--font-mono); font-size:.68rem; letter-spacing:.34em; color:var(--ink-60); text-transform:uppercase; }
+
+  /* ═══ PHASE 1 · 问卷 ═══ */
+  #quiz { position:fixed; inset:0; z-index:300; background:var(--bg); overflow-y:auto; display:none; }
+  #quiz.on { display:block; animation:fadeUp .45s ease; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:none; } }
+  .quiz-inner { max-width:760px; margin:0 auto; padding:3.2rem 2rem 7rem; }
+  .quiz-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:2.8rem; }
+  .quiz-brand { font-family:var(--font-brand); font-size:1.3rem; letter-spacing:.05em; }
+  .quiz-museum { font-family:var(--font-mono); font-size:.68rem; letter-spacing:.18em; color:var(--ink-60); text-transform:uppercase; }
+  .quiz-title { font-size:clamp(1.9rem,4.5vw,2.7rem); font-weight:700; letter-spacing:-.02em; line-height:1.18; }
+  .quiz-sub { margin-top:.7rem; color:var(--ink-60); font-size:.95rem; font-weight:300; }
+  .q-block { margin-top:2.4rem; }
+  .q-head { display:flex; align-items:baseline; gap:.8rem; margin-bottom:1rem; }
+  .q-num { font-family:var(--font-mono); font-size:.72rem; color:var(--ink-40); letter-spacing:.1em; }
+  .q-label { font-size:1.05rem; font-weight:500; }
+  .q-hint { font-family:var(--font-mono); font-size:.64rem; color:var(--ink-40); letter-spacing:.08em; margin-left:auto; text-transform:uppercase; }
+  .opt-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:.6rem; }
+  .opt { border:var(--line); background:var(--bg); padding:.9rem .9rem .8rem; text-align:left; transition:.13s; display:flex; flex-direction:column; gap:.25rem; }
+  .opt:hover { background:var(--panel); }
+  .opt.on { background:var(--ink); color:var(--bg); }
+  .opt .ol { font-size:.92rem; font-weight:500; }
+  .opt .od { font-family:var(--font-mono); font-size:.62rem; letter-spacing:.05em; opacity:.55; }
+  .chips { display:flex; flex-wrap:wrap; gap:.5rem; }
+  .chip { border:var(--line); background:var(--bg); padding:.5rem 1rem; font-size:.84rem; font-weight:300; transition:.13s; }
+  .chip:hover { background:var(--panel); }
+  .chip.on { background:var(--ink); color:var(--bg); }
+  .quiz-actions { margin-top:3rem; display:flex; gap:.8rem; align-items:center; }
+  /* 右下角跳过 */
+  #btnSkip { position:fixed; right:2rem; bottom:2rem; z-index:310; background:var(--bg); color:var(--ink-60);
+    border:var(--line); padding:.8rem 1.5rem; font-family:var(--font-mono); font-size:.7rem;
+    letter-spacing:.12em; text-transform:uppercase; transition:.15s; box-shadow:4px 4px 0 rgba(17,17,17,.12); }
+  #btnSkip:hover { color:var(--bg); background:var(--ink); }
+
+  /* ═══ PHASE 1.5 · AI 加载 ═══ */
+  #loading { position:fixed; inset:0; z-index:350; background:var(--bg);
+    display:none; flex-direction:column; align-items:center; justify-content:center; gap:1.6rem; }
+  #loading.on { display:flex; animation:fadeUp .3s ease; }
+  #loading .lt { font-size:1.6rem; font-weight:700; letter-spacing:-.01em; }
+  #loading .lbar { width:220px; height:1px; background:rgba(17,17,17,.15); position:relative; overflow:hidden; }
+  #loading .lbar i { position:absolute; left:0; top:0; bottom:0; width:0; background:var(--ink); transition:width .4s ease; }
+  #loading .lstep { font-family:var(--font-mono); font-size:.68rem; letter-spacing:.16em; color:var(--ink-60); text-transform:uppercase; min-height:1em; }
+
+  /* ═══ PHASE 2 · 地图页 ═══ */
+  #mapPage { display:none; height:100vh; grid-template-columns:330px 1fr; }
+  #mapPage.on { display:grid; animation:fadeUp .45s ease; }
+  @media(max-width:900px){ #mapPage.on { grid-template-columns:1fr; grid-template-rows:auto 1fr; } }
+
+  #sidebar { border-right:var(--line); display:flex; flex-direction:column; min-height:0; background:var(--bg); }
+  @media(max-width:900px){ #sidebar{ border-right:none; border-bottom:var(--line); } }
+  .sb-head { padding:1.3rem 1.4rem 1.1rem; border-bottom:var(--line-soft); }
+  .sb-brand-row { display:flex; align-items:baseline; justify-content:space-between; }
+  .sb-brand { font-family:var(--font-brand); font-size:1.15rem; letter-spacing:.05em; }
+  .sb-home { font-family:var(--font-mono); font-size:.62rem; letter-spacing:.12em; color:var(--ink-60); text-decoration:none; text-transform:uppercase; }
+  .sb-home:hover { color:var(--ink); text-decoration:underline; }
+  .sb-museum { margin-top:.5rem; font-size:1.02rem; font-weight:700; letter-spacing:-.01em; }
+  .sb-museum-sub { font-family:var(--font-mono); font-size:.6rem; letter-spacing:.14em; color:var(--ink-40); margin-top:.2rem; text-transform:uppercase; }
+  .sb-tabs { display:flex; border-bottom:var(--line-soft); }
+  .sb-tab { flex:1; background:none; border:none; padding:.75rem 0 .65rem;
+    font-family:var(--font-mono); font-size:.68rem; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--ink-40); border-bottom:2px solid transparent; margin-bottom:-1px; transition:.15s; }
+  .sb-tab.on { color:var(--ink); border-bottom-color:var(--ink); }
+  .sb-body { flex:1; overflow-y:auto; padding:1.1rem 1.2rem; min-height:0; }
+  @media(max-width:900px){ .sb-body{ max-height:34vh; } }
+  .sb-pane { display:none; } .sb-pane.on { display:block; }
+
+  .route-item { border:var(--line-soft); padding:.85rem .95rem; margin-bottom:.55rem; cursor:pointer; background:var(--bg); transition:.13s; }
+  .route-item:hover { border-color:var(--ink); }
+  .route-item.on { border:var(--line); box-shadow:inset 3px 0 0 var(--ink); }
+  .route-item .rn { font-size:.92rem; font-weight:500; display:flex; align-items:center; gap:.5rem; }
+  .route-item .rm { font-family:var(--font-mono); font-size:.62rem; color:var(--ink-60); margin-top:.35rem; letter-spacing:.04em; }
+  .route-item .rd { font-size:.76rem; color:var(--ink-60); font-weight:300; margin-top:.3rem; line-height:1.5; }
+  .route-item .ai-tag { font-family:var(--font-mono); font-size:.56rem; letter-spacing:.14em; border:var(--line); padding:.12rem .4rem; text-transform:uppercase; }
+  .route-item.custom { border:1px dashed var(--ink); }
+
+  .recustom-blurb { font-size:.86rem; color:var(--ink-60); font-weight:300; line-height:1.7; margin-bottom:1.2rem; }
+  .pref-summary { border:var(--line-soft); padding:.9rem 1rem; margin-bottom:1.2rem; }
+  .pref-summary .ps-row { display:flex; justify-content:space-between; gap:1rem; font-size:.78rem; padding:.28rem 0; }
+  .pref-summary .ps-row span:first-child { color:var(--ink-60); font-weight:300; flex:0 0 auto; }
+  .pref-summary .ps-row span:last-child { font-family:var(--font-mono); font-size:.68rem; text-align:right; }
+
+  .sb-foot { border-top:var(--line-soft); padding:.9rem 1.2rem; }
+  .sb-cur { font-family:var(--font-mono); font-size:.62rem; color:var(--ink-40); letter-spacing:.14em; text-transform:uppercase; margin-bottom:.4rem; }
+  .sb-cur-route { font-size:.92rem; font-weight:500; }
+  .sb-cur-meta { font-family:var(--font-mono); font-size:.64rem; color:var(--ink-60); margin-top:.25rem; }
+
+  #main { display:flex; flex-direction:column; min-height:0; position:relative; background:var(--bg); }
+  .route-head { padding:1.2rem 1.8rem 1rem; border-bottom:var(--line-soft); }
+  .route-head h1 { font-size:1.45rem; font-weight:700; letter-spacing:-.02em; }
+  .route-meta { font-family:var(--font-mono); font-size:.68rem; color:var(--ink-60); margin-top:.45rem; letter-spacing:.05em; }
+  .reason-chips { display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.6rem; }
+  .reason-chip { font-family:var(--font-mono); font-size:.6rem; letter-spacing:.06em; border:var(--line-soft); padding:.22rem .55rem; color:var(--ink-60); }
+  .reason-chip b { color:var(--ink); font-weight:700; }
+
+  .floor-bar { display:flex; align-items:stretch; border-bottom:var(--line); overflow-x:auto; background:var(--bg); }
+  .floor-btn { background:none; border:none; border-right:var(--line-soft); padding:.7rem 1.35rem .6rem;
+    font-family:var(--font-mono); font-size:.8rem; font-weight:700; letter-spacing:.1em; color:var(--ink-40);
+    transition:.13s; white-space:nowrap; }
+  .floor-btn small { display:block; font-size:.52rem; font-weight:400; letter-spacing:.12em; margin-top:.12rem; text-transform:uppercase; opacity:.75; }
+  .floor-btn:hover { color:var(--ink); background:var(--panel); }
+  .floor-btn.on { background:var(--ink); color:var(--bg); }
+  .floor-btn.dim { opacity:.35; }
+  .floor-btn.dim.on { opacity:1; }
+  .floor-progress { margin-left:auto; align-self:center; padding:0 1.2rem; font-family:var(--font-mono);
+    font-size:.62rem; color:var(--ink-40); letter-spacing:.12em; white-space:nowrap; text-transform:uppercase; }
+
+  .floor-view { flex:1; overflow-y:auto; padding:1.5rem 1.8rem 6.5rem; min-height:0; }
+  .floor-title-row { display:flex; align-items:baseline; gap:1rem; margin-bottom:1.1rem; flex-wrap:wrap; }
+  .floor-title { font-family:var(--font-mono); font-size:1.05rem; font-weight:700; letter-spacing:.12em; }
+  .floor-sub { font-size:.8rem; color:var(--ink-60); font-weight:300; }
+
+  /* ── 楼层 SVG 地图 ── */
+  .fmap-wrap { border:var(--line); max-width:980px; background:#fff; }
+  .fmap { width:100%; height:auto; display:block; }
+
+  /* ── 真实地图（图片+SVG叠加）── */
+  .fmap-real-wrap { border:var(--line); max-width:980px; position:relative; background:#fff; overflow:hidden; }
+  .fmap-real-wrap img { width:100%; height:auto; display:block; }
+  .fmap-real-svg { position:absolute; inset:0; width:100%; height:100%; }
+  .fmap-real-svg .route-path { stroke:#111; stroke-width:3; fill:none; stroke-dasharray:10 8; stroke-linejoin:round; stroke-linecap:round; animation:dashmove 1.2s linear infinite; }
+  .fmap-real-svg .marker { fill:#fff; stroke:#111; stroke-width:2.5; filter:drop-shadow(0 1px 3px rgba(0,0,0,.25)); }
+  .fmap-real-svg .marker-num { font-family:'Space Mono',monospace; font-size:15px; font-weight:700; fill:#111; text-anchor:middle; dominant-baseline:central; }
+  .fmap-real-svg .g-label { font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:500; fill:#111; text-anchor:middle; paint-order:stroke; stroke:#fff; stroke-width:3px; stroke-linejoin:round; }
+  .fmap-real-svg .g-sub { font-family:'Space Mono',monospace; font-size:10px; fill:rgba(17,17,17,.7); text-anchor:middle; paint-order:stroke; stroke:#fff; stroke-width:2.5px; stroke-linejoin:round; }
+  .fmap-real-svg .g-hit { cursor:pointer; fill:transparent; }
+  .fmap-real-svg .g-box:hover .marker { fill:#111; }
+  .fmap-real-svg .g-box:hover .marker-num { fill:#fff; }
+  .fmap .floor-outline { fill:none; stroke:rgba(17,17,17,.35); stroke-width:1; }
+  .fmap .decor { fill:none; stroke:rgba(17,17,17,.22); stroke-width:1; stroke-dasharray:3 4; }
+  .fmap .decor-t { font-family:'Space Mono',monospace; font-size:9px; fill:rgba(17,17,17,.45); text-anchor:middle; letter-spacing:.14em; }
+  .fmap .route-path { stroke:#111; stroke-width:2; fill:none; stroke-dasharray:7 6; stroke-linejoin:round; animation:dashmove 1.2s linear infinite; }
+  @keyframes dashmove { to { stroke-dashoffset:-26; } }
+  .fmap .g-rect { fill:#fff; stroke:rgba(17,17,17,.28); stroke-width:1; transition:.12s; }
+  .fmap .g-rect.on-route { stroke:#111; stroke-width:1.5; }
+  .fmap .g-box { cursor:pointer; }
+  .fmap .g-box:hover .g-rect { fill:#111; }
+  .fmap .g-box:hover .g-name, .fmap .g-box:hover .g-sub { fill:#fff; }
+  .fmap .g-name { font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:500; fill:#111; text-anchor:middle; transition:.12s; }
+  .fmap .g-name.off { fill:rgba(17,17,17,.4); font-weight:300; }
+  .fmap .g-sub { font-family:'Space Mono',monospace; font-size:8.5px; fill:rgba(17,17,17,.5); text-anchor:middle; letter-spacing:.06em; transition:.12s; }
+  .fmap .marker { fill:#fff; stroke:#111; stroke-width:2; }
+  .fmap .marker-num { font-family:'Space Mono',monospace; font-size:12px; font-weight:700; fill:#111; text-anchor:middle; dominant-baseline:central; }
+  .fmap .g-box:hover .marker { fill:#fff; }
+  .fmap .g-box:hover .marker-num { fill:#111; }
+
+  /* ── 楼层内站点列表 ── */
+  .stops { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:.7rem; max-width:980px; margin-top:1.1rem; }
+  .stop-card { border:var(--line); background:var(--bg); padding:.9rem 1rem; cursor:pointer; transition:.13s; position:relative; }
+  .stop-card:hover { background:var(--panel); box-shadow:4px 4px 0 rgba(17,17,17,.9); transform:translate(-2px,-2px); }
+  .stop-ord { position:absolute; top:.8rem; right:.9rem; font-family:var(--font-mono); font-size:.78rem; font-weight:700; color:rgba(17,17,17,.3); }
+  .stop-name { font-size:.98rem; font-weight:700; letter-spacing:-.01em; padding-right:2rem; }
+  .stop-dur { font-family:var(--font-mono); font-size:.64rem; color:var(--ink-60); letter-spacing:.05em; margin-top:.3rem; }
+  .stop-tags { display:flex; gap:.35rem; margin-top:.5rem; flex-wrap:wrap; }
+  .stag { font-family:var(--font-mono); font-size:.54rem; letter-spacing:.12em; padding:.16rem .45rem; border:var(--line); text-transform:uppercase; }
+  .stag.inv { background:var(--ink); color:var(--bg); }
+  .stag.soft { border-color:rgba(17,17,17,.25); color:var(--ink-60); }
+  .stop-notes { margin-top:.5rem; font-size:.8rem; color:var(--ink-60); font-weight:300; line-height:1.55; }
+
+  .floor-empty { max-width:640px; border:1px dashed rgba(17,17,17,.35); padding:2rem; margin-top:1rem; }
+  .floor-empty h3 { font-size:1.05rem; font-weight:700; margin-bottom:.5rem; }
+  .floor-empty p { font-size:.86rem; color:var(--ink-60); font-weight:300; line-height:1.7; }
+  .floor-empty .fe-list { font-family:var(--font-mono); font-size:.7rem; color:var(--ink-60); margin-top:1rem; line-height:2; }
+
+  #nextFloorBtn { position:absolute; right:1.6rem; bottom:1.6rem; z-index:20;
+    background:var(--ink); color:var(--bg); border:var(--line);
+    font-family:var(--font-mono); font-size:.74rem; letter-spacing:.12em; text-transform:uppercase;
+    padding:.95rem 1.6rem; box-shadow:5px 5px 0 rgba(17,17,17,.18); transition:.15s; }
+  #nextFloorBtn:hover { transform:translate(-2px,-2px); box-shadow:7px 7px 0 rgba(17,17,17,.18); }
+
+  /* ── 总结卡片 ── */
+  .sum-card { border:var(--line); max-width:860px; }
+  .sum-hero { padding:1.7rem 1.8rem 1.3rem; border-bottom:var(--line-soft); }
+  .sum-hero .st { font-family:var(--font-mono); font-size:.62rem; letter-spacing:.22em; color:var(--ink-40); text-transform:uppercase; }
+  .sum-hero h2 { font-size:1.65rem; font-weight:700; letter-spacing:-.02em; margin-top:.5rem; }
+  .sum-stats { display:grid; grid-template-columns:repeat(4,1fr); border-bottom:var(--line-soft); }
+  @media(max-width:640px){ .sum-stats{ grid-template-columns:repeat(2,1fr); } }
+  .sum-stat { padding:1.1rem 1rem; border-right:var(--line-soft); text-align:center; }
+  .sum-stat:last-child { border-right:none; }
+  .sum-stat .n { font-size:1.9rem; font-weight:700; letter-spacing:-.02em; }
+  .sum-stat .l { font-family:var(--font-mono); font-size:.56rem; letter-spacing:.16em; color:var(--ink-40); margin-top:.3rem; text-transform:uppercase; }
+  .sum-sec { padding:1.2rem 1.8rem; border-bottom:var(--line-soft); }
+  .sum-sec h4 { font-family:var(--font-mono); font-size:.62rem; letter-spacing:.2em; color:var(--ink-40); text-transform:uppercase; margin-bottom:.7rem; }
+  .sum-sec p, .sum-sec li { font-size:.85rem; color:var(--ink-60); font-weight:300; line-height:1.8; }
+  .sum-sec ul { list-style:none; }
+  .sum-sec li b { color:var(--ink); font-weight:500; }
+  .sum-actions { display:flex; gap:.7rem; padding:1.2rem 1.8rem; flex-wrap:wrap; }
+
+  /* ── 展点信息卡 ── */
+  #stopModal { position:fixed; inset:0; z-index:500; background:rgba(255,255,255,.85); backdrop-filter:blur(4px);
+    display:none; align-items:center; justify-content:center; padding:1.5rem; }
+  #stopModal.on { display:flex; animation:fadeUp .25s ease; }
+  .sm-box { background:var(--bg); border:var(--line); max-width:540px; width:100%; max-height:88vh; overflow-y:auto; box-shadow:8px 8px 0 rgba(17,17,17,.14); }
+  .sm-img { width:100%; aspect-ratio:16/9.5; object-fit:cover; display:block; border-bottom:var(--line); }
+  .sm-ph { aspect-ratio:16/9.5; border-bottom:var(--line); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.6rem; background:var(--panel); }
+  .sm-ph .ch { font-family:var(--font-brand); font-size:4rem; }
+  .sm-ph .cp { font-family:var(--font-mono); font-size:.56rem; letter-spacing:.26em; color:var(--ink-40); text-transform:uppercase; }
+  .sm-body { padding:1.3rem 1.5rem 1.5rem; }
+  .sm-top { display:flex; align-items:flex-start; gap:1rem; }
+  .sm-name { font-size:1.3rem; font-weight:700; letter-spacing:-.01em; }
+  .sm-en { font-family:var(--font-mono); font-size:.6rem; color:var(--ink-40); letter-spacing:.08em; margin-top:.25rem; text-transform:uppercase; }
+  .sm-close { margin-left:auto; background:none; border:var(--line); width:34px; height:34px; font-size:1rem; line-height:1; transition:.13s; flex:0 0 auto; }
+  .sm-close:hover { background:var(--ink); color:var(--bg); }
+  .sm-meta { display:flex; flex-wrap:wrap; gap:.4rem; margin:.85rem 0 .95rem; }
+  .sm-meta .stag { font-size:.58rem; padding:.26rem .55rem; }
+  .sm-desc { font-size:.86rem; color:var(--ink-60); font-weight:300; line-height:1.75; }
+  .sm-sec { margin-top:1.05rem; }
+  .sm-sec h5 { font-family:var(--font-mono); font-size:.58rem; letter-spacing:.2em; color:var(--ink-40); text-transform:uppercase; margin-bottom:.5rem; }
+  .sm-hl { display:flex; flex-wrap:wrap; gap:.4rem; }
+  .sm-hl .chip { font-size:.76rem; padding:.35rem .75rem; cursor:default; }
+  .sm-treasure { font-size:.84rem; font-weight:300; padding:.32rem 0; border-bottom:var(--line-soft); display:flex; justify-content:space-between; gap:1rem; }
+  .sm-treasure:last-child { border-bottom:none; }
+  .sm-treasure .tp { font-family:var(--font-mono); font-size:.6rem; color:var(--ink-40); white-space:nowrap; }
+  .sm-pop { height:3px; background:rgba(17,17,17,.12); margin-top:.4rem; }
+  .sm-pop i { display:block; height:100%; background:var(--ink); }
+
+  /* ── 筹备中 ── */
+  #soon { position:fixed; inset:0; z-index:390; background:var(--bg); display:none;
+    flex-direction:column; align-items:center; justify-content:center; gap:1.2rem; text-align:center; padding:2rem; }
+  #soon.on { display:flex; animation:fadeUp .4s ease; }
+  #soon h2 { font-size:1.8rem; font-weight:700; letter-spacing:-.02em; }
+  #soon p { color:var(--ink-60); font-weight:300; max-width:420px; line-height:1.7; }
+  #soon .row { display:flex; gap:.8rem; margin-top:.8rem; flex-wrap:wrap; justify-content:center; }
+</style>
+</head>
+<body>
+
+<!-- PHASE 0 · 品牌闪现 -->
+<div id="flash">
+  <div class="fb">CuratorPath</div>
+  <div class="fs">AI Museum Route Planner</div>
+</div>
+
+<!-- PHASE 1 · 偏好问卷 -->
+<div id="quiz">
+  <div class="quiz-inner">
+    <div class="quiz-top">
+      <span class="quiz-brand">CuratorPath</span>
+      <span class="quiz-museum">上海博物馆（东馆）</span>
+    </div>
+    <h1 class="quiz-title">告诉我们你的偏好，<br>剩下的交给 AI。</h1>
+    <p class="quiz-sub">4 个小问题，生成一条只属于你的参观路线。也可以直接跳过，使用经典路线。</p>
+
+    <div class="q-block">
+      <div class="q-head"><span class="q-num">01</span><span class="q-label">你打算停留多久？</span></div>
+      <div class="opt-grid" id="qTime"></div>
+    </div>
+
+    <div class="q-block">
+      <div class="q-head"><span class="q-num">02</span><span class="q-label">对哪些领域感兴趣？</span><span class="q-hint">可多选</span></div>
+      <div class="chips" id="qInterests"></div>
+    </div>
+
+    <div class="q-block">
+      <div class="q-head"><span class="q-num">03</span><span class="q-label">想要什么游览节奏？</span></div>
+      <div class="opt-grid" id="qPace"></div>
+    </div>
+
+    <div class="q-block">
+      <div class="q-head"><span class="q-num">04</span><span class="q-label">需要无障碍动线吗？</span></div>
+      <div class="opt-grid" id="qAccess" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));"></div>
+    </div>
+
+    <div class="quiz-actions">
+      <button class="btn-solid" id="btnGenerate">生成我的路线 →</button>
+    </div>
+  </div>
+  <!-- 右下角跳过 -->
+  <button id="btnSkip">跳过 · 使用经典路线 →</button>
+</div>
+
+<!-- PHASE 1.5 · AI 加载 -->
+<div id="loading">
+  <div class="lt">AI 正在规划地图…</div>
+  <div class="lbar"><i id="lbarFill"></i></div>
+  <div class="lstep" id="lstep">正在分析你的偏好…</div>
+</div>
+
+<!-- PHASE 2 · 地图页 -->
+<div id="mapPage">
+  <aside id="sidebar">
+    <div class="sb-head">
+      <div class="sb-brand-row">
+        <span class="sb-brand">CuratorPath</span>
+        <a class="sb-home" href="index.html?skip=1">← 首页</a>
+      </div>
+      <div class="sb-museum">上海博物馆（东馆）</div>
+      <div class="sb-museum-sub">Shanghai Museum East · 世纪大道 1952 号</div>
+    </div>
+    <div class="sb-tabs">
+      <button class="sb-tab on" id="tabA">经典路线库</button>
+      <button class="sb-tab" id="tabB">重新定制</button>
+    </div>
+    <div class="sb-body">
+      <div class="sb-pane on" id="paneA"></div>
+      <div class="sb-pane" id="paneB">
+        <p class="recustom-blurb">偏好变了？重新填写问卷，AI 会基于你的最新选择重新匹配路线。</p>
+        <div class="pref-summary" id="prefSummary"></div>
+        <button class="btn-solid" id="btnRecustom" style="width:100%;">重新打开问卷</button>
+      </div>
+    </div>
+    <div class="sb-foot">
+      <div class="sb-cur">当前路线</div>
+      <div class="sb-cur-route" id="curRouteName">—</div>
+      <div class="sb-cur-meta" id="curRouteMeta">—</div>
+    </div>
+  </aside>
+
+  <main id="main">
+    <div class="route-head">
+      <h1 id="routeTitle">—</h1>
+      <div class="route-meta" id="routeMeta"></div>
+      <div class="reason-chips" id="reasonChips"></div>
+    </div>
+    <div class="floor-bar" id="floorBar"></div>
+    <div class="floor-view" id="floorView"></div>
+    <button id="nextFloorBtn">下一层 ▸</button>
+  </main>
+</div>
+
+<!-- 展点信息卡 -->
+<div id="stopModal"><div class="sm-box" id="smBox"></div></div>
+
+<!-- 筹备中 -->
+<div id="soon">
+  <div class="quiz-brand" style="font-size:1.4rem;">CuratorPath</div>
+  <h2>这座博物馆的路线数据正在筹备中</h2>
+  <p>策展团队正在为它测绘展厅、整理馆藏数据。先来看看已上线的上海博物馆（东馆）吧。</p>
+  <div class="row">
+    <button class="btn-solid" id="soonGo">看看上海博物馆东馆 →</button>
+    <button class="btn-ghost" id="soonHome">返回首页</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ════════════════════════════════════════════════
+   CuratorPath · 上博东馆路线规划
+   品牌闪现 → 问卷(右下角可跳过) → AI 规划 → 楼层地图
+   ════════════════════════════════════════════════ */
+
+const DATA_BASE = 'material%20museum/shangahi1/data/';
+const IMG_BASE  = 'material%20museum/shangahi1/images/artworks/';
+
+/* 展厅 → 本地图片 */
+const GALLERY_IMG = {
+  G_Bronze:'bronze_cowrie_container.jpg', G_Sculpture:'sculpture_vajrabhairava.jpg',
+  G_Jade:'jade_gallery.jpg', G_Seal:'seal_gallery.jpg',
+  G_Painting:'painting_gaoyi_tu.jpg', G_Shanghai_Painting:'shanghai_painting_lady_mirror.jpg',
+  G_Ceramics:'ceramix_camel_sogdian.jpg', G_Numismatics:'numismatics_gallery.jpg',
+  G_Archaeology:'archaeology_gallery.jpg', G_Jiangnan:'jiangnan_gallery.jpg',
+  ENTRY:'museum_exterior.jpg'
+};
+/* 无图展厅占位字 */
+const GALLERY_PH = { G_Calligraphy:'书', G_CeraMIX:'瓷', G_ZhaoPuchu:'朴', G_Roof:'园',
+  G_Special1:'特', G_Special2:'特', G_Special3:'特' };
+
+/* 兴趣标签 → 展厅（primary 必含；secondary 深度节奏追加）*/
+const INTERESTS = [
+  { id:'bronze',      label:'青铜器',      primary:'G_Bronze',      secondary:[] },
+  { id:'sculpture',   label:'雕塑',        primary:'G_Sculpture',   secondary:[] },
+  { id:'jade',        label:'玉器',        primary:'G_Jade',        secondary:[] },
+  { id:'calligraphy', label:'书法',        primary:'G_Calligraphy', secondary:['G_ZhaoPuchu'] },
+  { id:'painting',    label:'绘画',        primary:'G_Painting',    secondary:['G_Shanghai_Painting'] },
+  { id:'ceramics',    label:'陶瓷',        primary:'G_Ceramics',    secondary:['G_CeraMIX'] },
+  { id:'coins',       label:'货币',        primary:'G_Numismatics', secondary:[] },
+  { id:'seal',        label:'玺印篆刻',    primary:'G_Seal',        secondary:[] },
+  { id:'archaeology', label:'考古 · 上海', primary:'G_Archaeology', secondary:[] },
+  { id:'jiangnan',    label:'江南文化',    primary:'G_Jiangnan',    secondary:[] },
+  { id:'special',     label:'当季特展',    primary:'G_Special1',    secondary:['G_Special2','G_Special3'] },
+  { id:'roof',        label:'屋顶花园',    primary:'G_Roof',        secondary:[] }
+];
+
+/* 人气 id → 展厅 id */
+const POP_MAP = { bronze_gallery:'G_Bronze', calligraphy_gallery:'G_Calligraphy', painting_gallery:'G_Painting',
+  sculpture_gallery:'G_Sculpture', special_exhibition:'G_Special1', jade_gallery:'G_Jade',
+  ceramics_gallery:'G_Ceramics', roof_garden:'G_Roof', seal_gallery:'G_Seal',
+  jiangnan_gallery:'G_Jiangnan', numismatics:'G_Numismatics', archaeology:'G_Archaeology',
+  ceramix:'G_CeraMIX', shanghai_painting:'G_Shanghai_Painting', zhao_puchu:'G_ZhaoPuchu' };
+
+const TIME_OPTIONS = [
+  { id:'t1',    label:'1 小时以内',       min:60,  desc:'快速打卡' },
+  { id:'t23',   label:'2 – 3 小时',       min:150, desc:'经典节奏' },
+  { id:'thalf', label:'半天 · 约 4 小时', min:240, desc:'从容细逛' },
+  { id:'tfull', label:'一整天 · 6 小时+', min:360, desc:'全部看遍' }
+];
+const PACE_OPTIONS = [
+  { id:'highlights', label:'精选必看', desc:'只看核心，节奏紧凑' },
+  { id:'deep',       label:'深度慢逛', desc:'看全看细，不赶时间' },
+  { id:'wander',     label:'随性漫步', desc:'有主线，也留空白' }
+];
+const ACCESS_OPTIONS = [
+  { id:'no',  label:'不需要',       desc:'常规动线' },
+  { id:'yes', label:'需要无障碍',   desc:'电梯优先 · 少走台阶' }
+];
+
+const FLOORS = ['B1','1F','2F','3F','4F','5F'];
+const DEFAULT_ROUTE_ID = 'highlights_2h';
+
+/* ── 每层展厅布局（SVG viewBox 1000×440）── */
+const FLOOR_LAYOUT = {
+  'B1': {
+    ENTRY:      { x:360, y:150, w:280, h:140 },
+    _decor: [ { x:80,  y:190, w:150, h:80, t:'存包处' }, { x:770, y:190, w:150, h:80, t:'地铁 2/4/6 号线' } ]
+  },
+  '1F': {
+    G_Bronze:   { x:50,  y:120, w:280, h:220 },
+    G_Sculpture:{ x:670, y:120, w:280, h:220 },
+    G_Special1: { x:400, y:40,  w:200, h:100 },
+    _decor: [ { x:400, y:200, w:200, h:100, t:'中央大厅 · 服务台' } ]
+  },
+  '2F': {
+    G_Jade:             { x:50,  y:120, w:210, h:200 },
+    G_Seal:             { x:300, y:150, w:140, h:140 },
+    G_Calligraphy:      { x:470, y:150, w:140, h:140 },
+    G_Painting:         { x:740, y:120, w:210, h:200 },
+    G_Special2:         { x:400, y:35,  w:200, h:85  },
+    G_Shanghai_Painting:{ x:400, y:330, w:200, h:80  },
+    _decor: []
+  },
+  '3F': {
+    G_Ceramics:   { x:50,  y:120, w:230, h:200 },
+    G_CeraMIX:    { x:320, y:150, w:150, h:140 },
+    G_ZhaoPuchu:  { x:500, y:150, w:150, h:140 },
+    G_Numismatics:{ x:720, y:120, w:230, h:200 },
+    G_Special3:   { x:400, y:35,  w:200, h:85  },
+    _decor: [ { x:400, y:330, w:200, h:70, t:'餐厅' } ]
+  },
+  '4F': {
+    G_Archaeology:{ x:70,  y:130, w:320, h:190 },
+    G_Jiangnan:   { x:610, y:130, w:320, h:190 },
+    _decor: [ { x:440, y:45, w:120, h:60, t:'茶室' } ]
+  },
+  '5F': {
+    G_Roof: { x:250, y:110, w:500, h:220 },
+    _decor: []
+  }
+};
+
+/* ── 真实地图图片（1-4楼）── */
+const MAP_IMG_BASE = 'material%20museum/shangahi1/images/maps/';
+const REAL_MAP_FLOORS = {
+  '1F': { src:'1.png', w:2656, h:1556 },
+  '2F': { src:'2.png', w:2852, h:1558 },
+  '3F': { src:'3.png', w:2850, h:1558 },
+  '4F': { src:'4.png', w:2768, h:1554 }
+};
+/* 各楼层展厅在真实地图上的标记坐标（基于图片像素） */
+const MAP_MARKERS = {
+  '1F': {
+    G_Bronze:    { x:370, y:640 },
+    G_Special1:  { x:1480, y:560 },
+    G_Sculpture: { x:1150, y:1180 },
+    ENTRY:       { x:900, y:780 }
+  },
+  '2F': {
+    G_Jade:              { x:750, y:320 },
+    G_Seal:              { x:1350, y:320 },
+    G_Calligraphy:       { x:2050, y:320 },
+    G_Special2:          { x:380, y:650 },
+    G_Shanghai_Painting: { x:700, y:1250 },
+    G_Painting:          { x:2050, y:1200 }
+  },
+  '3F': {
+    G_Ceramics:    { x:1100, y:350 },
+    G_CeraMIX:     { x:700, y:750 },
+    G_Numismatics: { x:700, y:1250 },
+    G_Special3:    { x:1400, y:1250 },
+    G_ZhaoPuchu:   { x:2100, y:1250 }
+  },
+  '4F': {
+    G_Jiangnan:    { x:1200, y:350 },
+    G_Archaeology: { x:1400, y:1200 },
+    G_ZhaoPuchu:   { x:700, y:1200 }
+  }
+};
+
+/* ═══ 数据（fetch 优先，内嵌副本兖底）═══ */
+let GALLERIES = [], ROUTES = [], ARTWORKS = [], POPULARITY = [], PRACTICAL = null, FLOOR_SUMMARY = {};
+
+async function loadData() {
+  try {
+    const [g, r, a, p, info] = await Promise.all([
+      fetch(DATA_BASE + 'galleries.json').then(x => { if (!x.ok) throw 0; return x.json(); }),
+      fetch(DATA_BASE + 'routes.json').then(x => { if (!x.ok) throw 0; return x.json(); }),
+      fetch(DATA_BASE + 'artworks.json').then(x => { if (!x.ok) throw 0; return x.json(); }),
+      fetch(DATA_BASE + 'popularity.json').then(x => { if (!x.ok) throw 0; return x.json(); }),
+      fetch(DATA_BASE + 'practical-info.json').then(x => { if (!x.ok) throw 0; return x.json(); })
+    ]);
+    GALLERIES = g.galleries; FLOOR_SUMMARY = g.floorSummary || {};
+    ROUTES = r.routes; ARTWORKS = a.artworks;
+    POPULARITY = p.popularityEstimates.items; PRACTICAL = info;
+  } catch (e) {
+    const d = EMBEDDED;
+    GALLERIES = d.galleries; FLOOR_SUMMARY = d.floorSummary;
+    ROUTES = d.routes; ARTWORKS = d.artworks;
+    POPULARITY = d.popularity; PRACTICAL = d.practical;
+  }
+}
+
+/* file:// 打开时的兜底数据（与 data/*.json 一致） */
+const EMBEDDED = {
+  floorSummary: {
+    '1F':'青铜馆、雕塑馆、第一特展厅、服务中心、商店咖啡','2F':'玉器馆、玺印篆刻馆、书法馆、绘画馆、上海书画馆、第二特展厅',
+    '3F':'陶瓷馆、CeraMIX馆、货币馆、赵朴初书法馆、第三特展厅、餐厅','4F':'考古馆、江南文化馆、茶室',
+    '5F':'屋顶花园（天气依赖）','B1':'东入口（丁香路方向）、存包处'
+  },
+  galleries: [
+    { id:'G_Bronze', name:'中国古代青铜馆', nameEN:'Ancient Chinese Bronze Gallery', floor:1, zone:'West', description:'海内外体系最完整的古代青铜器阵列，展出500余件，涵盖夏代至清代3600年青铜艺术史', highlights:['大克鼎(西周)','子仲姜盘(春秋)','商鞅方升(战国)','见日之光镜(西汉)'], walkingTime_min:30, mustSee:true },
+    { id:'G_Sculpture', name:'雕塑馆', nameEN:'Sculpture Gallery', floor:1, zone:'East', description:'289件/套骨雕、玉雕、青铜造像、木俑、陶俑，三分之一为首次公开展出', highlights:['白石供养菩萨像(唐代)','各类佛教造像'], walkingTime_min:20, mustSee:true },
+    { id:'G_Special1', name:'第一特展厅', nameEN:'Special Exhibition Hall 1', floor:1, zone:'North', description:"大型特展空间，举办'何以中国'系列等重磅特展", walkingTime_min:20, mustSee:false },
+    { id:'G_Jade', name:'中国古代玉器馆', nameEN:'Jade Gallery', floor:2, zone:'West', description:'近350件/组玉器，从新石器时代至清代，六个单元呈现中国万年玉文化', highlights:['红山文化玉器','良渚文化玉器'], walkingTime_min:20, mustSee:true },
+    { id:'G_Seal', name:'玺印篆刻馆', nameEN:'Seal Gallery', floor:2, zone:'Center-West', description:'568件印章，海内外首个中国印章专题陈列馆，展示印章史与全球古代文明的关系', walkingTime_min:15, mustSee:false },
+    { id:'G_Calligraphy', name:'中国历代书法馆', nameEN:'Calligraphy Gallery', floor:2, zone:'Center-East', description:'海内外唯一的常设通史书法陈列，展出多件国宝级书法名迹', highlights:['王羲之草书《上虞帖》','王献之《鸭头丸帖》','怀素草书《苦笋帖》'], walkingTime_min:25, mustSee:true },
+    { id:'G_Painting', name:'中国历代绘画馆', nameEN:'Painting Gallery', floor:2, zone:'East', description:'海内外唯一的常设通史绘画陈列，展出多年未公开展示的国宝级书画', highlights:['《高逸图》卷(唐·孙位)','《雪竹图》轴'], walkingTime_min:25, mustSee:true },
+    { id:'G_Special2', name:'第二特展厅', nameEN:'Special Exhibition Hall 2', floor:2, zone:'North', description:'大型特展空间，举办国际交流大展', walkingTime_min:20, mustSee:false },
+    { id:'G_Shanghai_Painting', name:'上海书画馆', nameEN:'Shanghai Painting and Calligraphy Gallery', floor:2, zone:'South', description:'探索江南文化、海派文化与红色文化，通过书画呈现上海文化脉络', walkingTime_min:15, mustSee:false },
+    { id:'G_Ceramics', name:'中国古代陶瓷展', nameEN:'Ceramics Gallery', floor:3, zone:'West', description:'中国陶瓷通史陈列，从新石器至明清，体系最完整的通史陈列之一', highlights:['绿釉鹦鹉形杯','各类名窑瓷器'], walkingTime_min:25, mustSee:true },
+    { id:'G_CeraMIX', name:'CeraMIX 陶瓷与中外交流馆', nameEN:'CeraMIX Gallery', floor:3, zone:'Center', description:'全新常设展，通过陶瓷贸易讲述隋唐至明清中国与世界的经济文化交流', walkingTime_min:15, mustSee:false },
+    { id:'G_Numismatics', name:'中国历代货币馆', nameEN:'Numismatics Gallery', floor:3, zone:'East', description:'展出6000余枚钱币，规模翻倍，全面回顾中国货币金融发展史', walkingTime_min:15, mustSee:false },
+    { id:'G_ZhaoPuchu', name:'赵朴初书法馆', nameEN:'Calligraphy by Zhao Puchu Gallery', floor:3, zone:'Center-East', description:'纪念赵朴初(1907-2000)先生的书法艺术专题馆', walkingTime_min:10, mustSee:false },
+    { id:'G_Archaeology', name:'考古上海馆', nameEN:'Archaeology Gallery', floor:4, zone:'West', description:'2000余件考古文物，追溯上海6000年城市演变史', walkingTime_min:15, mustSee:false },
+    { id:'G_Jiangnan', name:'江南文化馆', nameEN:'Jiangnan Gallery', floor:4, zone:'East', description:'现代极简风格融合江南文化元素，自然光与户外景观中品味文物', walkingTime_min:15, mustSee:false },
+    { id:'G_Special3', name:'第三特展厅', nameEN:'Special Exhibition Hall 3', floor:3, zone:'North', description:'国际交流特展空间', walkingTime_min:20, mustSee:false },
+    { id:'G_Roof', name:'屋顶花园', nameEN:'Roof Garden', floor:5, description:'5楼屋顶花园，天气不好时临时关闭', walkingTime_min:15, mustSee:true, seasonal:true }
+  ],
+  routes: [
+    { id:'highlights_2h', name:'2小时精华速览', duration_min:120, description:'快速打卡上博东馆最核心的展厅与镇馆之宝', totalWalkingTime_min:15,
+      stops:[ {order:1,galleryId:'G_Bronze',name:'青铜馆',duration_min:30,notes:'大克鼎、子仲姜盘等镇馆之宝'}, {order:2,galleryId:'G_Sculpture',name:'雕塑馆',duration_min:15,notes:'白石供养菩萨像'}, {order:3,galleryId:'G_Calligraphy',name:'书法馆',duration_min:20,notes:'王羲之、怀素'}, {order:4,galleryId:'G_Painting',name:'绘画馆',duration_min:20,notes:'高逸图等'}, {order:5,galleryId:'G_Special1',name:'特展厅',duration_min:20,notes:'看当期特展'} ] },
+    { id:'full_day', name:'全天深度游', duration_min:300, description:'逐层游览全部13个常设展厅+特展+屋顶花园', totalWalkingTime_min:30,
+      stops:[ {order:1,galleryId:'G_Bronze',name:'青铜馆',duration_min:35}, {order:2,galleryId:'G_Sculpture',name:'雕塑馆',duration_min:20}, {order:3,galleryId:'G_Jade',name:'玉器馆',duration_min:20}, {order:4,galleryId:'G_Seal',name:'玺印篆刻馆',duration_min:15}, {order:5,galleryId:'G_Calligraphy',name:'书法馆',duration_min:25}, {order:6,galleryId:'G_Painting',name:'绘画馆',duration_min:25}, {order:7,galleryId:'G_Shanghai_Painting',name:'上海书画馆',duration_min:15}, {order:8,galleryId:'G_Ceramics',name:'陶瓷馆',duration_min:25}, {order:9,galleryId:'G_CeraMIX',name:'CeraMIX馆',duration_min:15}, {order:10,galleryId:'G_Numismatics',name:'货币馆',duration_min:15}, {order:11,galleryId:'G_Archaeology',name:'考古上海馆',duration_min:15}, {order:12,galleryId:'G_Jiangnan',name:'江南文化馆',duration_min:15}, {order:13,galleryId:'G_Roof',name:'屋顶花园',duration_min:15} ] },
+    { id:'treasure_hunt', name:'镇馆之宝打卡线', duration_min:90, description:'直奔十大镇馆之宝，适合初次来访', totalWalkingTime_min:10,
+      stops:[ {order:1,galleryId:'G_Bronze',name:'青铜馆',duration_min:30,notes:'大克鼎+子仲姜盘+商鞅方升+见日之光镜，4件镇馆之宝集中于此'}, {order:2,galleryId:'G_Sculpture',name:'雕塑馆',duration_min:15,notes:'白石供养菩萨像，唐代佛教造像巅峰'}, {order:3,galleryId:'G_Calligraphy',name:'书法馆',duration_min:20,notes:'上虞帖+鸭头丸帖+苦笋帖，3件书法国宝'}, {order:4,galleryId:'G_Painting',name:'绘画馆',duration_min:20,notes:'高逸图+雪竹图；书画轮换展示，不一定每次都能看到'} ] },
+    { id:'bronze_focus', name:'青铜器深度游', duration_min:60, description:'深入探索3600年中国青铜文明', totalWalkingTime_min:5,
+      stops:[ {order:1,galleryId:'G_Bronze',name:'青铜馆全览',duration_min:45,notes:'夏→商→西周→春秋→战国→秦汉→唐宋→明清，500余件'}, {order:2,galleryId:'G_Ceramics',name:'陶瓷馆（青铜器相关）',duration_min:15,notes:'商周青铜器与早期陶器的关联'} ] },
+    { id:'calligraphy_painting', name:'书画艺术之旅', duration_min:90, description:'探索上博最引以为豪的书画收藏', totalWalkingTime_min:5,
+      stops:[ {order:1,galleryId:'G_Calligraphy',name:'书法馆',duration_min:25,notes:'王羲之→怀素→历代书法通史'}, {order:2,galleryId:'G_Painting',name:'绘画馆',duration_min:25,notes:'唐代→宋元→明清绘画通史'}, {order:3,galleryId:'G_Shanghai_Painting',name:'上海书画馆',duration_min:15,notes:'海派书画'}, {order:4,galleryId:'G_Seal',name:'玺印篆刻馆',duration_min:15,notes:'印章与书画的关联'}, {order:5,galleryId:'G_ZhaoPuchu',name:'赵朴初书法馆',duration_min:10,notes:'近现代书法'} ] },
+    { id:'family_kids', name:'亲子探索线', duration_min:150, description:'适合带孩子的趣味路线，注重视觉冲击和互动体验', totalWalkingTime_min:20,
+      stops:[ {order:1,galleryId:'G_Bronze',name:'青铜馆',duration_min:25,notes:'巨大的青铜鼎，孩子会觉得震撼'}, {order:2,galleryId:'G_Sculpture',name:'雕塑馆',duration_min:20,notes:'各种造型的佛像和动物雕塑'}, {order:3,galleryId:'G_Jade',name:'玉器馆',duration_min:15,notes:'精美的玉石工艺'}, {order:4,galleryId:'G_Ceramics',name:'陶瓷馆',duration_min:20,notes:'漂亮的瓷器'}, {order:5,galleryId:'G_Numismatics',name:'货币馆',duration_min:15,notes:'各种古代钱币，孩子感兴趣'}, {order:6,galleryId:'G_Archaeology',name:'考古上海馆',duration_min:15,notes:'上海本地的考古发现'} ] }
+  ],
+  artworks: [
+    { id:'da_ke_ding', name:'大克鼎', period:'西周晚期', gallery:'G_Bronze', description:'海内青铜器三宝之一，铭文290字，上博镇馆之宝之首', isTreasure:true },
+    { id:'zi_zhong_jiang_pan', name:'子仲姜盘', period:'春秋早期', gallery:'G_Bronze', description:'春秋早期盥洗器，鱼蛙等水生动物装饰精美', isTreasure:true },
+    { id:'shang_yang_fang_sheng', name:'商鞅方升', period:'战国中期', gallery:'G_Bronze', description:'战国标准量器，见证秦统一度量衡的历史起点', isTreasure:true },
+    { id:'jian_ri_zhi_guang_mirror', name:'见日之光镜', period:'西汉', gallery:'G_Bronze', description:'西汉透光镜，日光照射时镜面文字可映于墙上', isTreasure:true },
+    { id:'bai_shi_bodhisattva', name:'白石供养菩萨像', period:'唐代', gallery:'G_Sculpture', description:'汉白玉雕造，唐代佛教造像巅峰之作', isTreasure:true },
+    { id:'gao_yi_tu', name:'高逸图卷', period:'唐代', gallery:'G_Painting', description:'唐代仅存的人物画孤品，竹林七贤残卷；轮换展示', isTreasure:true },
+    { id:'xue_zhu_tu', name:'雪竹图轴', period:'五代/北宋', gallery:'G_Painting', description:'传世名迹，雪竹意境深远', isTreasure:true },
+    { id:'shang_yu_tie', name:'王羲之上虞帖卷', period:'东晋(摹本)', gallery:'G_Calligraphy', description:'书圣王羲之草书名迹', isTreasure:true },
+    { id:'ya_tou_wan_tie', name:'王献之鸭头丸帖卷', period:'东晋', gallery:'G_Calligraphy', description:'王献之传世行书名作', isTreasure:true },
+    { id:'ku_sun_tie', name:'怀素苦笋帖卷', period:'唐代', gallery:'G_Calligraphy', description:'唐代狂草大师怀素传世名迹', isTreasure:true },
+    { id:'jade_humanoid', name:'人形玉神像', period:'新石器时代', gallery:'G_Jade', description:'4000多年前玉器神人像，良渚文化代表性玉器', isTreasure:false },
+    { id:'ceramics_parrot_cup', name:'绿釉鹦鹉形杯', period:'唐代', gallery:'G_Ceramics', description:'唐代绿釉精品，鹦鹉造型生动', isTreasure:false }
+  ],
+  popularity: [
+    { id:'bronze_gallery', score:1.0, tier:1 }, { id:'calligraphy_gallery', score:0.90, tier:1 },
+    { id:'painting_gallery', score:0.85, tier:1 }, { id:'sculpture_gallery', score:0.80, tier:2 },
+    { id:'special_exhibition', score:0.85, tier:1 }, { id:'jade_gallery', score:0.70, tier:2 },
+    { id:'ceramics_gallery', score:0.70, tier:2 }, { id:'roof_garden', score:0.65, tier:2 },
+    { id:'seal_gallery', score:0.55, tier:3 }, { id:'jiangnan_gallery', score:0.55, tier:3 },
+    { id:'numismatics', score:0.50, tier:3 }, { id:'archaeology', score:0.50, tier:3 },
+    { id:'ceramix', score:0.50, tier:3 }, { id:'shanghai_painting', score:0.45, tier:3 }, { id:'zhao_puchu', score:0.40, tier:3 }
+  ],
+  practical: {
+    hours: { schedule:[{open:'10:00',close:'18:00'}], lastEntry:'17:00' },
+    admission: { reservation:{ individual:{ note:'散客免预约，凭有效身份证件入馆' } }, priorityAccess:{ note:'65岁以上及残障观众可经 1F 北门优先入馆' } },
+    entrance: { individual:'B1 东入口（近丁香路），需安检',
+      metro:[ {line:2,station:'上海科技馆站',exit:'8号口'}, {line:4,station:'浦电路站',exit:'2号口'}, {line:6,station:'浦电路站',exit:'1号口'} ] },
+    facilities: { dining:[ {name:'商店咖啡',floor:'1F'}, {name:'咖啡阶梯',floor:'2F-3F'}, {name:'餐厅',floor:'4F'}, {name:'茶室',floor:'4F'} ],
+      services:['寄存处(1F)','轮椅免费租借(凭证件)','童车租借','母婴室','急救','失物招领','饮用水'] },
+    roofGarden: { note:'天气不佳时临时关闭，可能限流' }
+  }
+};
+
+/* ═══ 工具 ═══ */
+const $ = s => document.querySelector(s);
+const galleryById = id => GALLERIES.find(g => g.id === id);
+const popOf = gid => POPULARITY.find(x => POP_MAP[x.id] === gid) || null;
+const floorKey = f => (f <= 0 ? 'B1' : f + 'F');
+const shortName = n => (n || '').replace(/（.*?）/g, '');
+const round5 = n => Math.max(5, Math.round(n / 5) * 5);
+function fmtDur(min) {
+  if (min < 60) return min + ' 分钟';
+  const h = Math.floor(min / 60), m = min % 60;
+  return m ? h + ' 小时 ' + m + ' 分' : h + ' 小时';
+}
+const imgSrc = gid => GALLERY_IMG[gid] ? encodeURI(IMG_BASE + GALLERY_IMG[gid]) : null;
+
+/* ═══ AI 路线匹配 ═══ */
+function matchRoute(prefs) {
+  const reasons = [];
+
+  /* 1. 时间 → 最接近时长的预置路线 */
+  let base = ROUTES[0], best = Infinity;
+  ROUTES.forEach(r => {
+    const d = Math.abs(r.duration_min - prefs.timeMin);
+    if (d < best) { best = d; base = r; }
+  });
+  reasons.push('以时长最接近的 <b>「' + base.name + '」</b> 为基底');
+
+  let stops = base.stops.map(s => ({ ...s }));
+
+  /* 2. 兴趣 → 必含展厅 */
+  const must = [];
+  prefs.interests.forEach(iid => {
+    const it = INTERESTS.find(x => x.id === iid);
+    if (!it) return;
+    must.push(it.primary);
+    if (prefs.pace === 'deep') must.push(...it.secondary);
+  });
+  const inRoute = new Set(stops.map(s => s.galleryId));
+  const addedNames = [];
+  [...new Set(must)].forEach(gid => {
+    if (inRoute.has(gid)) return;
+    const g = galleryById(gid);
+    if (!g) return;
+    stops.push({ galleryId:gid, name:shortName(g.name), duration_min:g.walkingTime_min || 15,
+      notes:(g.highlights && g.highlights[0]) ? '亮点：' + g.highlights[0] : g.description, added:true });
+    addedNames.push(shortName(g.name));
+  });
+  if (addedNames.length) reasons.push('按兴趣必含 <b>' + addedNames.join('、') + '</b>');
+
+  /* 3. 节奏 */
+  if (prefs.pace === 'highlights') {
+    stops = stops.filter(s => {
+      const g = galleryById(s.galleryId), p = popOf(s.galleryId);
+      return (g && g.mustSee) || (p && p.tier <= 2) || must.includes(s.galleryId);
+    });
+    stops.forEach(s => { s.duration_min = round5(s.duration_min * 0.9); });
+    reasons.push('精选节奏：已 <b>跳过低人气展厅</b>、压缩停留');
+  } else if (prefs.pace === 'deep') {
+    stops.forEach(s => { s.duration_min = round5(s.duration_min * 1.35); });
+    reasons.push('深度节奏：各展厅停留 <b>+35%</b>，看全看细');
+  } else {
+    stops.forEach(s => {
+      s.duration_min = round5(s.duration_min * 1.1);
+      const g = galleryById(s.galleryId);
+      if (g && !g.mustSee) s.optional = true;
+    });
+    reasons.push('漫步节奏：非核心展厅标注为 <b>可自由取舍</b>');
+  }
+
+  /* 4. 按楼层上行排序（同层保持原顺序） */
+  stops = stops.map((s, i) => ({ ...s, _i:i }));
+  stops.sort((a, b) => {
+    const fa = galleryById(a.galleryId) ? galleryById(a.galleryId).floor : 1;
+    const fb = galleryById(b.galleryId) ? galleryById(b.galleryId).floor : 1;
+    return fa - fb || a._i - b._i;
+  });
+  stops.forEach((s, i) => { s.order = i + 1; delete s._i; });
+
+  if (prefs.access) reasons.push('已标注 <b>无障碍动线</b>：电梯优先，B1 无障碍入口');
+
+  const walking = (base.totalWalkingTime_min || 10) + addedNames.length * 5;
+  const totalMin = round5(stops.reduce((t, s) => t + s.duration_min, 0) + walking);
+
+  return { id:'ai_custom', custom:true, name:'AI 定制路线', basedOn:base.name,
+    description:'基于「' + base.name + '」按你的偏好调整', stops, walkingMin:walking, totalMin, reasons };
+}
+
+function normalizePreset(r) {
+  const stops = r.stops.map((s, i) => ({ ...s, order:i + 1 }));
+  const walking = r.totalWalkingTime_min || 10;
+  const totalMin = round5(stops.reduce((t, s) => t + s.duration_min, 0) + walking);
+  return { id:r.id, custom:false, name:r.name, description:r.description, stops, walkingMin:walking, totalMin, reasons:[] };
+}
+
+/* ═══ 全局状态 ═══ */
+const state = {
+  prefs: { timeMin:150, timeLabel:'2 – 3 小时', interests:[], pace:'highlights', access:false },
+  route: null, floor: null, floorsInRoute: [], customRoute: null
+};
+
+function entryStop() {
+  return { galleryId:'ENTRY', name:'东入口 · 安检入馆', duration_min:10,
+    notes:'散客自 B1 东入口（近丁香路）安检入馆，可存包、免费租借轮椅与童车', virtual:true, order:0 };
+}
+function routeFloors(route) {
+  const set = new Set(['B1']);
+  route.stops.forEach(s => { const g = galleryById(s.galleryId); if (g) set.add(floorKey(g.floor)); });
+  return FLOORS.filter(f => set.has(f));
+}
+function stopsOnFloor(route, fk) {
+  if (fk === 'B1') return [entryStop()];
+  return route.stops.filter(s => { const g = galleryById(s.galleryId); return g && floorKey(g.floor) === fk; });
+}
+function routeStats(route) {
+  const gids = new Set(route.stops.map(s => s.galleryId));
+  const treasures = ARTWORKS.filter(a => a.isTreasure && gids.has(a.gallery)).length;
+  return { stops:route.stops.length, floors:routeFloors(route).length, treasures, totalMin:route.totalMin };
+}
+
+/* ═══ 问卷 ═══ */
+function renderQuiz() {
+  $('#qTime').innerHTML = TIME_OPTIONS.map(o =>
+    '<button class="opt' + (state.prefs.timeMin === o.min ? ' on' : '') + '" data-v="' + o.min + '" data-l="' + o.label + '">' +
+    '<span class="ol">' + o.label + '</span><span class="od">' + o.desc + '</span></button>').join('');
+  $('#qInterests').innerHTML = INTERESTS.map(o =>
+    '<button class="chip' + (state.prefs.interests.includes(o.id) ? ' on' : '') + '" data-v="' + o.id + '">' + o.label + '</button>').join('');
+  $('#qPace').innerHTML = PACE_OPTIONS.map(o =>
+    '<button class="opt' + (state.prefs.pace === o.id ? ' on' : '') + '" data-v="' + o.id + '">' +
+    '<span class="ol">' + o.label + '</span><span class="od">' + o.desc + '</span></button>').join('');
+  $('#qAccess').innerHTML = ACCESS_OPTIONS.map(o =>
+    '<button class="opt' + ((state.prefs.access ? 'yes' : 'no') === o.id ? ' on' : '') + '" data-v="' + o.id + '">' +
+    '<span class="ol">' + o.label + '</span><span class="od">' + o.desc + '</span></button>').join('');
+}
+$('#qTime').addEventListener('click', e => {
+  const b = e.target.closest('.opt'); if (!b) return;
+  state.prefs.timeMin = +b.dataset.v; state.prefs.timeLabel = b.dataset.l; renderQuiz();
+});
+$('#qPace').addEventListener('click', e => {
+  const b = e.target.closest('.opt'); if (!b) return;
+  state.prefs.pace = b.dataset.v; renderQuiz();
+});
+$('#qAccess').addEventListener('click', e => {
+  const b = e.target.closest('.opt'); if (!b) return;
+  state.prefs.access = b.dataset.v === 'yes'; renderQuiz();
+});
+$('#qInterests').addEventListener('click', e => {
+  const b = e.target.closest('.chip'); if (!b) return;
+  const id = b.dataset.v, arr = state.prefs.interests, i = arr.indexOf(id);
+  if (i >= 0) arr.splice(i, 1); else arr.push(id);
+  b.classList.toggle('on');
+});
+
+/* ═══ 阶段切换 ═══ */
+function showPhase(id) {
+  ['flash','quiz','loading','mapPage','soon'].forEach(p => $('#' + p).classList.remove('on'));
+  if (id) $('#' + id).classList.add('on');
+}
+function runLoading(done) {
+  showPhase('loading');
+  const steps = ['正在分析你的偏好…', '正在匹配展厅与路线…', '正在优化楼层动线…'];
+  let i = 0;
+  $('#lbarFill').style.width = '10%';
+  const tick = () => {
+    $('#lstep').textContent = steps[i];
+    $('#lbarFill').style.width = Math.min(94, 10 + (i + 1) * 28) + '%';
+    i++;
+    if (i < steps.length) setTimeout(tick, 420);
+    else setTimeout(() => { $('#lbarFill').style.width = '100%'; setTimeout(done, 260); }, 420);
+  };
+  setTimeout(tick, 150);
+}
+
+/* ═══ 地图页渲染 ═══ */
+function setRoute(route, jumpToFirst) {
+  state.route = route;
+  state.floorsInRoute = routeFloors(route);
+  if (route.custom) state.customRoute = route;
+  renderLibrary();
+  const st = routeStats(route);
+  $('#routeTitle').textContent = route.name;
+  $('#routeMeta').textContent =
+    '约 ' + fmtDur(st.totalMin) + ' · ' + st.stops + ' 个展厅 · 跨 ' + st.floors + ' 层 · 镇馆之宝 ' + st.treasures + ' 件';
+  $('#reasonChips').innerHTML = (route.reasons || []).map(r => '<span class="reason-chip">' + r + '</span>').join('');
+  $('#curRouteName').textContent = route.name;
+  $('#curRouteMeta').textContent = fmtDur(st.totalMin) + ' · ' + st.stops + ' 站 · ' + st.floors + ' 层';
+  renderFloorBar();
+  goFloor(jumpToFirst === false && state.floor ? state.floor : state.floorsInRoute[0]);
+  renderPrefSummary();
+}
+
+/* ── 侧边栏：经典路线库 ── */
+function renderLibrary() {
+  const items = [];
+  if (state.customRoute) {
+    const r = state.customRoute, st = routeStats(r);
+    items.push(routeItemHTML(r, st, true));
+  }
+  ROUTES.forEach(r0 => {
+    const r = normalizePreset(r0), st = routeStats(r);
+    items.push(routeItemHTML(r, st, false));
+  });
+  $('#paneA').innerHTML = items.join('');
+  document.querySelectorAll('#paneA .route-item').forEach(el => {
+    el.addEventListener('click', () => {
+      const id = el.dataset.rid;
+      const r = id === 'ai_custom' ? state.customRoute : normalizePreset(ROUTES.find(x => x.id === id));
+      setRoute(r, true);
+    });
+  });
+}
+function routeItemHTML(r, st, isCustom) {
+  const on = state.route && state.route.id === r.id ? ' on' : '';
+  return '<div class="route-item' + on + (isCustom ? ' custom' : '') + '" data-rid="' + r.id + '">' +
+    '<div class="rn">' + (isCustom ? '<span class="ai-tag">AI</span>' : '') + r.name + '</div>' +
+    '<div class="rm">约 ' + fmtDur(st.totalMin) + ' · ' + st.stops + ' 站 · 跨 ' + st.floors + ' 层</div>' +
+    '<div class="rd">' + (r.description || '') + '</div></div>';
+}
+
+/* ── 侧边栏：重新定制 ── */
+function renderPrefSummary() {
+  const p = state.prefs;
+  const its = p.interests.map(id => (INTERESTS.find(x => x.id === id) || {}).label).filter(Boolean);
+  $('#prefSummary').innerHTML =
+    '<div class="ps-row"><span>停留时间</span><span>' + p.timeLabel + '</span></div>' +
+    '<div class="ps-row"><span>兴趣领域</span><span>' + (its.join('、') || '未选择') + '</span></div>' +
+    '<div class="ps-row"><span>游览节奏</span><span>' + (PACE_OPTIONS.find(x => x.id === p.pace) || {}).label + '</span></div>' +
+    '<div class="ps-row"><span>无障碍</span><span>' + (p.access ? '需要' : '不需要') + '</span></div>';
+}
+$('#tabA').addEventListener('click', () => switchTab('A'));
+$('#tabB').addEventListener('click', () => switchTab('B'));
+function switchTab(t) {
+  $('#tabA').classList.toggle('on', t === 'A');
+  $('#tabB').classList.toggle('on', t === 'B');
+  $('#paneA').classList.toggle('on', t === 'A');
+  $('#paneB').classList.toggle('on', t === 'B');
+}
+$('#btnRecustom').addEventListener('click', () => { renderQuiz(); showPhase('quiz'); });
+
+/* ── 楼层栏 ── */
+function renderFloorBar() {
+  const sub = { 'B1':'入口', '1F':'青铜 · 雕塑', '2F':'玉 · 书画', '3F':'陶瓷 · 货币', '4F':'考古 · 江南', '5F':'屋顶花园' };
+  $('#floorBar').innerHTML = FLOORS.map(f => {
+    const has = state.floorsInRoute.includes(f);
+    return '<button class="floor-btn' + (state.floor === f ? ' on' : '') + (has ? '' : ' dim') + '" data-f="' + f + '">' +
+      f + '<small>' + sub[f] + '</small></button>';
+  }).join('') + '<span class="floor-progress" id="floorProg"></span>';
+  document.querySelectorAll('.floor-btn').forEach(b =>
+    b.addEventListener('click', () => goFloor(b.dataset.f)));
+}
+$('#nextFloorBtn').addEventListener('click', () => {
+  const idx = state.floorsInRoute.indexOf(state.floor);
+  if (idx >= 0 && idx < state.floorsInRoute.length - 1) goFloor(state.floorsInRoute[idx + 1]);
+  else goFloor('SUMMARY');
+});
+
+/* ── 楼层视图 ── */
+function goFloor(fk) {
+  state.floor = fk;
+  document.querySelectorAll('.floor-btn').forEach(b => b.classList.toggle('on', b.dataset.f === fk));
+  const idx = state.floorsInRoute.indexOf(fk);
+  const prog = $('#floorProg');
+  if (prog) prog.textContent = fk === 'SUMMARY' ? '路线总结' : '第 ' + (idx + 1) + ' / ' + state.floorsInRoute.length + ' 层';
+
+  const view = $('#floorView');
+  if (fk === 'SUMMARY') {
+    view.innerHTML = summaryHTML();
+    bindSummary(view);
+  } else {
+    const stops = stopsOnFloor(state.route, fk);
+    let html = '<div class="floor-title-row"><span class="floor-title">' + fk + '</span>' +
+      '<span class="floor-sub">' + (FLOOR_SUMMARY[fk] || '') + '</span></div>';
+    html += REAL_MAP_FLOORS[fk] ? floorMapReal(fk, stops) : floorMapSVG(fk, stops);
+    if (!stops.length) {
+      const gs = GALLERIES.filter(g => floorKey(g.floor) === fk);
+      html += '<div class="floor-empty"><h3>本层未安排展厅</h3>' +
+        '<p>当前路线在这一层没有停留点。如果逛完还有余力，可以自由探索：</p>' +
+        '<div class="fe-list">' + (gs.map(g => shortName(g.name)).join(' · ') || '本层为公共通道') + '</div></div>';
+    } else {
+      html += '<div class="stops">' + stops.map(stopCardHTML).join('') + '</div>';
+    }
+    view.innerHTML = html;
+    bindFloorView(view);
+  }
+  view.scrollTop = 0;
+
+  const btn = $('#nextFloorBtn');
+  if (fk === 'SUMMARY') { btn.style.display = 'none'; return; }
+  btn.style.display = '';
+  btn.textContent = (idx >= 0 && idx < state.floorsInRoute.length - 1)
+    ? '下一层：' + state.floorsInRoute[idx + 1] + ' ▸'
+    : '完成 · 查看路线总结 ✓';
+}
+
+/* ── 楼层 SVG 地图 ── */
+function floorMapSVG(fk, stops) {
+  const layout = FLOOR_LAYOUT[fk] || {};
+  const decor = layout._decor || [];
+  const onRouteIds = stops.map(s => s.galleryId);
+  const gids = Object.keys(layout).filter(k => k !== '_decor');
+
+  /* 路线动线（按站点顺序连接展厅中心） */
+  const pts = onRouteIds.map(gid => {
+    const b = layout[gid];
+    return b ? { x:b.x + b.w / 2, y:b.y + b.h / 2, gid } : null;
+  }).filter(Boolean);
+  const path = pts.length > 1
+    ? '<path class="route-path" d="M ' + pts.map(p => p.x + ',' + p.y).join(' L ') + '"/>'
+    : '';
+
+  const boxes = gids.map(gid => {
+    const b = layout[gid];
+    const onIdx = onRouteIds.indexOf(gid);
+    const onRoute = onIdx >= 0;
+    const g = gid === 'ENTRY' ? null : galleryById(gid);
+    const name = gid === 'ENTRY' ? '东入口（B1）' : shortName(g ? g.name : gid);
+    const cx = b.x + b.w / 2, cy = b.y + b.h / 2;
+    const stop = onRoute ? stops[onIdx] : null;
+    const marker = onRoute
+      ? '<circle class="marker" cx="' + cx + '" cy="' + cy + '" r="14"/>' +
+        '<text class="marker-num" x="' + cx + '" y="' + cy + '">' + (gid === 'ENTRY' ? '始' : stop.order) + '</text>'
+      : '';
+    const sub = onRoute && gid !== 'ENTRY'
+      ? '<text class="g-sub" x="' + cx + '" y="' + (cy + 34) + '">建议 ' + stop.duration_min + ' 分钟</text>'
+      : (!onRoute ? '<text class="g-sub" x="' + cx + '" y="' + (cy + 18) + '">未安排</text>' : '');
+    const nameY = onRoute ? cy - 26 : cy + 5;
+    return '<g class="g-box" data-gid="' + gid + '">' +
+      '<rect class="g-rect' + (onRoute ? ' on-route' : '') + '" x="' + b.x + '" y="' + b.y + '" width="' + b.w + '" height="' + b.h + '"/>' +
+      '<text class="g-name' + (onRoute ? '' : ' off') + '" x="' + cx + '" y="' + nameY + '">' + name + '</text>' +
+      sub + marker + '</g>';
+  }).join('');
+
+  const decorHTML = decor.map(d =>
+    '<rect class="decor" x="' + d.x + '" y="' + d.y + '" width="' + d.w + '" height="' + d.h + '"/>' +
+    '<text class="decor-t" x="' + (d.x + d.w / 2) + '" y="' + (d.y + d.h / 2 + 3) + '">' + d.t + '</text>').join('');
+
+  return '<div class="fmap-wrap"><svg class="fmap" viewBox="0 0 1000 440" xmlns="http://www.w3.org/2000/svg">' +
+    '<rect class="floor-outline" x="20" y="15" width="960" height="410"/>' +
+    '<text class="decor-t" x="45" y="40" style="text-anchor:start;">↑ 电梯 · 楼梯</text>' +
+    decorHTML + path + boxes + '</svg></div>';
+}
+
+/* ── 真实地图 + 路线叠加（1-4楼）── */
+function floorMapReal(fk, stops) {
+  const mapInfo = REAL_MAP_FLOORS[fk];
+  const markers = MAP_MARKERS[fk] || {};
+  const onRouteIds = stops.map(s => s.galleryId);
+
+  /* 路线动线（按站点顺序连接标记点） */
+  const pts = onRouteIds.map(gid => {
+    const m = markers[gid];
+    return m ? { x:m.x, y:m.y, gid } : null;
+  }).filter(Boolean);
+  const path = pts.length > 1
+    ? '<path class="route-path" d="M ' + pts.map(p => p.x + ',' + p.y).join(' L ') + '"/>'
+    : '';
+
+  /* 所有标记点（路线上的编号 + 非路线的展厅名称） */
+  const allGids = Object.keys(markers);
+  const markersHTML = allGids.map(gid => {
+    const m = markers[gid];
+    const onIdx = onRouteIds.indexOf(gid);
+    const onRoute = onIdx >= 0;
+    const g = gid === 'ENTRY' ? null : galleryById(gid);
+    const name = gid === 'ENTRY' ? '东入口' : shortName(g ? g.name : gid);
+    const stop = onRoute ? stops[onIdx] : null;
+
+    if (onRoute) {
+      /* 路线上：编号圆圈 + 建议时长 */
+      return '<g class="g-box" data-gid="' + gid + '">' +
+        '<circle class="marker" cx="' + m.x + '" cy="' + m.y + '" r="17"/>' +
+        '<text class="marker-num" x="' + m.x + '" y="' + m.y + '">' + (gid === 'ENTRY' ? '始' : stop.order) + '</text>' +
+        '<text class="g-label" x="' + m.x + '" y="' + (m.y - 30) + '">' + name + '</text>' +
+        (gid !== 'ENTRY' ? '<text class="g-sub" x="' + m.x + '" y="' + (m.y + 36) + '">' + stop.duration_min + ' min</text>' : '') +
+        '<circle class="g-hit" cx="' + m.x + '" cy="' + m.y + '" r="28"/>' +
+        '</g>';
+    } else {
+      /* 非路线：小圆点 + 名称 */
+      return '<g class="g-box" data-gid="' + gid + '">' +
+        '<circle cx="' + m.x + '" cy="' + m.y + '" r="6" fill="rgba(17,17,17,.25)" stroke="none"/>' +
+        '<text class="g-sub" x="' + m.x + '" y="' + (m.y + 22) + '">' + name + '</text>' +
+        '<circle class="g-hit" cx="' + m.x + '" cy="' + m.y + '" r="24"/>' +
+        '</g>';
+    }
+  }).join('');
+
+  return '<div class="fmap-real-wrap">' +
+    '<img src="' + MAP_IMG_BASE + mapInfo.src + '" alt="' + fk + ' 楼层平面图">' +
+    '<svg class="fmap-real-svg" viewBox="0 0 ' + mapInfo.w + ' ' + mapInfo.h + '" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">' +
+    path + markersHTML + '</svg></div>';
+}
+
+/* ── 站点卡片 ── */
+function stopCardHTML(s) {
+  const g = galleryById(s.galleryId);
+  const tags = [];
+  if (s.virtual) tags.push('<span class="stag inv">起点</span>');
+  if (g && g.mustSee) tags.push('<span class="stag inv">必看</span>');
+  if (s.added) tags.push('<span class="stag inv">为你加入</span>');
+  if (s.optional) tags.push('<span class="stag soft">可取舍</span>');
+  if (g && g.seasonal) tags.push('<span class="stag soft">天气依赖</span>');
+  if (state.prefs.access && !s.virtual) tags.push('<span class="stag soft">无障碍可达</span>');
+  return '<div class="stop-card" data-gid="' + s.galleryId + '">' +
+    '<span class="stop-ord">' + (s.virtual ? '始' : String(s.order).padStart(2, '0')) + '</span>' +
+    '<div class="stop-name">' + (g ? shortName(g.name) : s.name) + '</div>' +
+    '<div class="stop-dur">建议 ' + s.duration_min + ' 分钟</div>' +
+    (tags.length ? '<div class="stop-tags">' + tags.join('') + '</div>' : '') +
+    (s.notes ? '<div class="stop-notes">' + s.notes + '</div>' : '') +
+    '</div>';
+}
+function bindFloorView(view) {
+  view.querySelectorAll('.stop-card, .fmap .g-box, .fmap-real-svg .g-box').forEach(el => {
+    el.addEventListener('click', () => {
+      const gid = el.dataset.gid;
+      if (gid === 'ENTRY') { openEntryModal(); return; }
+      if (!galleryById(gid)) return;
+      const s = state.route.stops.find(x => x.galleryId === gid) || null;
+      openStopModal(gid, s);
+    });
+  });
+}
+
+/* ── 总结卡片 ── */
+function summaryHTML() {
+  const r = state.route, st = routeStats(r), p = PRACTICAL || {};
+  const gids = new Set(r.stops.map(s => s.galleryId));
+  const treasures = ARTWORKS.filter(a => a.isTreasure && gids.has(a.gallery));
+  const metro = (((p.entrance || {}).metro) || []).map(m => m.line + '号线 ' + m.station + ' ' + m.exit).join(' · ');
+  const dining = (((p.facilities || {}).dining) || []).map(d => d.name + '（' + d.floor + '）').join('、');
+  const accessNote = state.prefs.access
+    ? '<li><b>无障碍提示：</b>' + ((((p.admission || {}).priorityAccess) || {}).note || '可优先入馆') + '；馆内电梯贯通 B1–5F，轮椅免费租借（凭证件）。</li>'
+    : '';
+  return '<div class="sum-card" id="summaryView">' +
+    '<div class="sum-hero"><div class="st">Route Summary · 路线总结</div><h2>' + r.name + '</h2></div>' +
+    '<div class="sum-stats">' +
+      '<div class="sum-stat"><div class="n">' + fmtDur(st.totalMin) + '</div><div class="l">预计总时长</div></div>' +
+      '<div class="sum-stat"><div class="n">' + st.stops + '</div><div class="l">展厅站点</div></div>' +
+      '<div class="sum-stat"><div class="n">' + st.floors + '</div><div class="l">覆盖楼层</div></div>' +
+      '<div class="sum-stat"><div class="n">' + st.treasures + '</div><div class="l">镇馆之宝</div></div>' +
+    '</div>' +
+    (treasures.length ? '<div class="sum-sec"><h4>沿途镇馆之宝</h4><ul>' +
+      treasures.map(a => '<li><b>' + a.name + '</b>（' + a.period + '）— ' + a.description + '</li>').join('') + '</ul></div>' : '') +
+    '<div class="sum-sec"><h4>实用信息</h4><ul>' +
+      '<li><b>开放：</b>10:00 – 18:00（周二闭馆，17:00 停止入馆）</li>' +
+      '<li><b>入馆：</b>' + (((p.entrance || {}).individual) || 'B1 东入口') + '；' + ((((p.admission || {}).reservation || {}).individual || {}).note || '散客免预约') + '</li>' +
+      (metro ? '<li><b>地铁：</b>' + metro + '</li>' : '') +
+      (dining ? '<li><b>餐饮：</b>' + dining + '</li>' : '') +
+      accessNote +
+      (gids.has('G_Roof') ? '<li><b>屋顶花园：</b>' + (((p.roofGarden || {}).note) || '天气不佳时临时关闭') + '</li>' : '') +
+    '</ul></div>' +
+    '<div class="sum-actions">' +
+      '<button class="btn-solid" id="sumRecustom">重新定制路线</button>' +
+      '<button class="btn-ghost" id="sumCopy">复制路线文本</button>' +
+      '<button class="btn-ghost" id="sumBack">回到第一层</button>' +
+    '</div></div>';
+}
+function bindSummary(view) {
+  view.querySelector('#sumRecustom').addEventListener('click', () => { renderQuiz(); showPhase('quiz'); });
+  view.querySelector('#sumBack').addEventListener('click', () => goFloor(state.floorsInRoute[0]));
+  view.querySelector('#sumCopy').addEventListener('click', e => {
+    const r = state.route;
+    let txt = 'CuratorPath · 上海博物馆（东馆）\n路线：' + r.name + '\n预计：' + fmtDur(routeStats(r).totalMin) + '\n\n';
+    txt += 'B1 · 东入口安检入馆（10 分钟）\n';
+    state.floorsInRoute.filter(f => f !== 'B1').forEach(f => {
+      stopsOnFloor(r, f).forEach(s => {
+        const g = galleryById(s.galleryId);
+        txt += f + ' · ' + (g ? shortName(g.name) : s.name) + '（' + s.duration_min + ' 分钟）' + (s.notes ? ' — ' + s.notes : '') + '\n';
+      });
+    });
+    navigator.clipboard.writeText(txt).then(() => {
+      e.target.textContent = '已复制 ✓';
+      setTimeout(() => { e.target.textContent = '复制路线文本'; }, 1600);
+    });
+  });
+}
+
+/* ═══ 展点信息卡 ═══ */
+function openStopModal(gid, stop) {
+  const g = galleryById(gid);
+  const pop = popOf(gid);
+  const treasures = ARTWORKS.filter(a => a.gallery === gid && a.isTreasure);
+  const img = imgSrc(gid);
+  const dur = stop ? stop.duration_min : (g.walkingTime_min || 15);
+  const media = img
+    ? '<img class="sm-img" src="' + img + '" alt="' + shortName(g.name) + '">'
+    : '<div class="sm-ph"><span class="ch">' + (GALLERY_PH[gid] || '馆') + '</span><span class="cp">IMAGE COMING SOON</span></div>';
+  $('#smBox').innerHTML = media +
+    '<div class="sm-body"><div class="sm-top"><div>' +
+      '<div class="sm-name">' + shortName(g.name) + '</div>' +
+      '<div class="sm-en">' + (g.nameEN || '') + '</div></div>' +
+      '<button class="sm-close" id="smClose">✕</button></div>' +
+    '<div class="sm-meta">' +
+      '<span class="stag inv">' + floorKey(g.floor) + '</span>' +
+      '<span class="stag soft">建议 ' + dur + ' 分钟</span>' +
+      (g.zone ? '<span class="stag soft">' + g.zone + ' 区</span>' : '') +
+      (g.mustSee ? '<span class="stag inv">必看</span>' : '') +
+      (g.seasonal ? '<span class="stag soft">天气依赖</span>' : '') +
+    '</div>' +
+    '<div class="sm-desc">' + (g.description || '') + (stop && stop.notes ? '<br><br>路线备注：' + stop.notes : '') + '</div>' +
+    (g.highlights && g.highlights.length
+      ? '<div class="sm-sec"><h5>亮点展品</h5><div class="sm-hl">' +
+        g.highlights.map(h => '<span class="chip">' + h + '</span>').join('') + '</div></div>' : '') +
+    (treasures.length
+      ? '<div class="sm-sec"><h5>镇馆之宝</h5>' +
+        treasures.map(a => '<div class="sm-treasure"><span>' + a.name + '</span><span class="tp">' + a.period + '</span></div>').join('') + '</div>' : '') +
+    (pop ? '<div class="sm-sec"><h5>人气指数 ' + Math.round(pop.score * 100) + '</h5><div class="sm-pop"><i style="width:' + Math.round(pop.score * 100) + '%"></i></div></div>' : '') +
+    '</div>';
+  $('#stopModal').classList.add('on');
+  $('#smClose').addEventListener('click', closeModal);
+}
+function openEntryModal() {
+  const p = PRACTICAL || {};
+  const metro = (((p.entrance || {}).metro) || []);
+  const services = (((p.facilities || {}).services) || []);
+  $('#smBox').innerHTML =
+    '<img class="sm-img" src="' + imgSrc('ENTRY') + '" alt="上海博物馆东馆">' +
+    '<div class="sm-body"><div class="sm-top"><div>' +
+      '<div class="sm-name">东入口 · 安检入馆</div>' +
+      '<div class="sm-en">B1 East Entrance</div></div>' +
+      '<button class="sm-close" id="smClose">✕</button></div>' +
+    '<div class="sm-meta"><span class="stag inv">B1</span><span class="stag soft">建议 10 分钟</span><span class="stag soft">起点</span></div>' +
+    '<div class="sm-desc">' + (((p.entrance || {}).individual) || '散客自 B1 东入口安检入馆') + '。' +
+      ((((p.admission || {}).reservation || {}).individual || {}).note || '') + '</div>' +
+    (metro.length ? '<div class="sm-sec"><h5>地铁</h5>' +
+      metro.map(m => '<div class="sm-treasure"><span>' + m.line + ' 号线 · ' + m.station + '</span><span class="tp">' + m.exit + '</span></div>').join('') + '</div>' : '') +
+    (services.length ? '<div class="sm-sec"><h5>馆内服务</h5><div class="sm-hl">' +
+      services.map(s => '<span class="chip">' + s + '</span>').join('') + '</div></div>' : '') +
+    '</div>';
+  $('#stopModal').classList.add('on');
+  $('#smClose').addEventListener('click', closeModal);
+}
+function closeModal() { $('#stopModal').classList.remove('on'); }
+$('#stopModal').addEventListener('click', e => { if (e.target.id === 'stopModal') closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+/* ═══ 问卷提交 / 跳过 ═══ */
+$('#btnGenerate').addEventListener('click', () => {
+  runLoading(() => {
+    const route = matchRoute(state.prefs);
+    setRoute(route, true);
+    switchTab('A');
+    showPhase('mapPage');
+  });
+});
+$('#btnSkip').addEventListener('click', () => {
+  /* 跳过 → 直接显示默认经典路线 */
+  const r0 = ROUTES.find(r => r.id === DEFAULT_ROUTE_ID) || ROUTES[0];
+  setRoute(normalizePreset(r0), true);
+  switchTab('A');
+  showPhase('mapPage');
+});
+
+/* ═══ 筹备中 ═══ */
+$('#soonGo').addEventListener('click', () => { location.href = 'planner.html?museum=shanghai'; });
+$('#soonHome').addEventListener('click', () => { location.href = 'index.html?skip=1'; });
+
+/* ═══ 启动 ═══ */
+(async function boot() {
+  const params = new URLSearchParams(location.search);
+  const m = (params.get('museum') || params.get('m') || 'shanghai').toLowerCase();
+  const isShanghai = ['shanghai', 'shmuseum', 'sh'].includes(m);
+
+  const dataReady = loadData();
+
+  /* 品牌闪现 ~600ms */
+  const flash = $('#flash');
+  flash.classList.add('show');
+  await new Promise(r => setTimeout(r, 600));
+  flash.classList.add('hide');
+  await Promise.all([dataReady, new Promise(r => setTimeout(r, 280))]);
+  flash.style.display = 'none';
+
+  if (!isShanghai) { showPhase('soon'); return; }
+  renderQuiz();
+  showPhase('quiz');
+})();
+</script>
+</body>
+</html>
